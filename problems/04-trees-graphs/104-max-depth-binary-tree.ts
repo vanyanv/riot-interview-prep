@@ -1,0 +1,51 @@
+/**
+ * 104. Maximum Depth of Binary Tree
+ * https://leetcode.com/problems/maximum-depth-of-binary-tree/
+ * Difficulty: Easy
+ *
+ * Given the root of a binary tree, return its maximum depth.
+ *
+ * A binary tree's maximum depth is the number of nodes along the longest
+ * path from the root node down to the farthest leaf node.
+ *
+ * Example 1:
+ *   Input: root = [3,9,20,null,null,15,7]
+ *   Output: 3
+ *   Explanation: The tree has the structure:
+ *       3
+ *      / \
+ *     9  20
+ *       /  \
+ *      15   7
+ *   The longest path is 3 -> 20 -> 15 (or 3 -> 20 -> 7), which has 3 nodes.
+ *
+ * Example 2:
+ *   Input: root = [1,null,2]
+ *   Output: 2
+ *
+ * Example 3:
+ *   Input: root = []
+ *   Output: 0
+ *
+ * Constraints:
+ *   - The number of nodes in the tree is in the range [0, 10^4].
+ *   - -100 <= Node.val <= 100
+ */
+
+class TreeNode {
+  val: number;
+  left: TreeNode | null;
+  right: TreeNode | null;
+  constructor(val?: number, left?: TreeNode | null, right?: TreeNode | null) {
+    this.val = val === undefined ? 0 : val;
+    this.left = left === undefined ? null : left;
+    this.right = right === undefined ? null : right;
+  }
+}
+
+function maxDepth(root: TreeNode | null): number {
+  // TODO: implement
+  return 0;
+}
+
+export { TreeNode, maxDepth };
