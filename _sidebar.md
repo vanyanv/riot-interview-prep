@@ -6,5 +6,6 @@
   - [Round 4 — Communicate & Collaborate](round-4-communicate-and-collaborate.md)
   - [Round 5 — Deep Tech](round-5-deep-tech.md)
 - **Resources**
+  - [Frontend System Design Prep](frontend-system-design-prep.md)
   - [LeetCode Problems](leetcode-problems.md)
   - [Crowd-Sourced Intel](crowd-sourced-intel.md)
