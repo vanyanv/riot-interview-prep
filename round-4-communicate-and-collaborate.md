@@ -338,3 +338,133 @@ Even if someone was clearly wrong, frame it as a learning experience.
 | Sound rehearsed or corporate | Be conversational and genuine | **Riot's culture is anti-corporate on purpose.** They make games. They want humans, not consultants. If your answer sounds like it came from a LinkedIn post, you'll lose Will in the first sentence. Speak the way you'd talk to a smart friend. | **Don't:** "I leveraged stakeholder alignment to drive cross-functional outcomes." **Do:** "I got everyone in a room and said, 'We're not on the same page. Let's fix that before we write more code.'" |
 | Skip the outcome | Always land the story with measurable results | **Without an outcome, your story is just an anecdote.** Will needs to evaluate your impact, and impact requires results. Numbers are best (30% faster, 2 weeks saved, zero bugs), but qualitative outcomes work too (team adopted the process, designer praised the collaboration). | **Don't:** "We resolved the conflict and moved forward." **Do:** "After we aligned, we shipped on time and the page load dropped from 3s to 800ms. The PM mentioned it in the quarterly review as a highlight." |
 | Avoid talking about failures | Own them — show what you learned | **Avoiding failure stories signals insecurity or low self-awareness.** Riot values "Stay Hungry; Stay Humble," which means they actively WANT to hear about failures — but only if you grew from them. A well-told failure story is more impressive than a polished success story. | **Don't:** "Honestly, I can't think of a time I really failed." **Do:** "I shipped a feature without writing integration tests because I was confident in the unit tests. It broke in production. After that, I became the team's biggest advocate for end-to-end testing. I set up our Cypress pipeline and it caught three critical bugs in the next quarter." |
+
+---
+
+## My Stories Mapped to This Round
+
+### Quick-Reference: Which Story for Which Question?
+
+| Question / Theme | Primary Story | Backup Story |
+|---|---|---|
+| Conflict with a teammate | Advocating Unconventional Approach (#6) | Siding with User (#8) |
+| Collaborate across teams | Daily Log Form (#9) | CMS Constraints (#3) |
+| Disagree with manager's decision | Risky Path vs Safe Path (#7) | Advocating Unconventional (#6) |
+| Received tough feedback | Daily Log Form (#9) | Untrustworthy Data (#4) |
+| Explain technical concepts to non-technical people | Advocating Unconventional (#6) | Risky Path (#7) |
+| Project wasn't going well | Untrustworthy Data (#4) | Real-Time Progress (#2) |
+| Stay aligned across time zones / remote | Daily Log Form (#9) | Real-Time Progress (#2) |
+| Theme: Navigating disagreement | Advocating Unconventional (#6) | Risky Path (#7) |
+| Theme: Cross-team collaboration | Daily Log Form (#9) | CMS Constraints (#3) |
+| Theme: Giving difficult feedback | Advocating Unconventional (#6) | Risky Path (#7) |
+| Theme: Receiving feedback and growing | Daily Log Form (#9) | Untrustworthy Data (#4) |
+| Theme: Working through ambiguity | Untrustworthy Data (#4) | Reverse-Engineering API (#5) |
+
+> **Tip:** Story #9 (Daily Log Form) and #6 (Advocating Unconventional) are your strongest for this round. #9 shows iterative collaboration with end users. #6 shows respectful disagreement and meeting someone where they are.
+
+---
+
+### Story Reframes (Will-Friendly — Focus on Communication & Collaboration)
+
+#### Story #6: Navigating Disagreement by Listening First
+**Best for:** "Conflict with a teammate" | "Disagree with manager" | "Explain technical concepts to non-technical people" | "Giving feedback"
+
+**Setting:** I was building an invoice processing system for a restaurant owner. I believed a newer, smarter approach would save time long-term, but the owner expected the conventional method — it was familiar, predictable, and what they'd seen before. They were skeptical of my idea and thought it sounded expensive and risky.
+
+**Action:** Instead of arguing for my approach, I started by asking the owner what mattered most to them. They told me: cost, accuracy, and not depending on something they couldn't understand. Those became my guiding criteria — not my technical preference. I put together a simple side-by-side comparison using their real data, focused entirely on the things they told me they cared about. I didn't dismiss their preferred approach — I acknowledged where it works well and showed specifically where it breaks down at their scale. When I addressed their concern about the new approach feeling like a "black box," I built in a review layer so they always had visibility and final say on edge cases. I framed the whole conversation as "here are two options with honest tradeoffs" and let them make the call.
+
+**Outcome:** They agreed to a one-week trial. After seeing it handle a completely new vendor's documents without any setup, they were sold. The real lesson wasn't about the technology — it was about communication. I didn't convince them by being right. I convinced them by showing I understood what they valued and by making it safe for them to try something new. If they had said no, I would have built exactly what they asked for — and tracked the results so we could revisit later with real data.
+
+> **Follow-up ready:** *"How do you handle disagreements in general?"* — I separate the *what* from the *who*. It's not my idea vs. their idea — it's which approach best serves the goal. I present evidence, listen to concerns, and let the best reasoning win.
+
+---
+
+#### Story #9: Iterating with End Users Until It Actually Works
+**Best for:** "Cross-team collaboration" | "Received tough feedback" | "Stay aligned remotely" | "Going above and beyond"
+
+**Setting:** At Chris N Eddy's, the restaurant managers needed to submit daily closing logs — cash counts, inventory levels, prep completion, bathroom checks. Before I got involved, this was all done through texts and phone calls to the owner. Nothing was consistent, things got lost, and the owner couldn't spot trends across locations.
+
+**Action:** I built a first version of a digital form and shared it with the managers. It didn't land. The form had too many fields, the layout was hard to use on their phones — which is what they'd be filling it out on at the end of a busy shift — and some inputs required typing when quick taps would've been better. Instead of guessing what to fix, I went directly to the managers — the people who'd use this every single night. Over several rounds of feedback, I simplified fields, replaced text inputs with dropdowns and checkboxes, made the layout mobile-first, and shortened the link so they could bookmark it easily. Each time I made changes, I checked back: "Is this easier? What's still annoying?" I kept iterating until they told me it felt fast and natural.
+
+**Outcome:** Every manager now uses the form daily. The owner gets consistent, structured data across all locations — no more digging through texts. The key lesson for me was about collaboration: the people who use a tool every day know more about what it should feel like than the person who builds it. My job wasn't to design the "right" form in isolation — it was to keep showing up, listening, and adjusting. "V1 shipped" wasn't done. Done was when the managers actually used it without friction.
+
+> **Follow-up ready:** *"How did you handle the negative feedback on v1?"* — I didn't take it personally. The managers weren't being difficult — they were telling me what "done" actually looks like. That feedback was the most useful input I got on the whole project.
+
+---
+
+#### Story #7: Communicating Risk Honestly Instead of Selling the Upside
+**Best for:** "Disagree with manager" | "Explain technical concepts" | "Project tradeoffs"
+
+**Setting:** The restaurant owner needed daily financial reports from a platform that had no way to export data automatically. The only option was to manually log in and download reports every day — dozens of downloads per week across multiple locations. I found a way to fully automate it, but the automated path was fragile — it depended on unofficial access that could break without warning.
+
+**Action:** I didn't just pick my preferred option. I laid out both paths to the owner with full honesty. I said: "Option A means you download reports manually every day — it always works but costs you 20 minutes. Option B means full automation, but it could break if the platform changes something on their end." Then I explained exactly what I'd build to manage the risk — automatic error detection, alerts if something breaks, and keeping the manual process as a fallback. I was transparent that I was recommending the riskier path, and I explained *why* the daily time savings justified the risk. I let the owner decide with all the information on the table.
+
+**Outcome:** They chose automation, and it's been running reliably multiple times a day. The lesson I took away is about communication more than engineering: people trust you more when you're honest about downsides than when you only sell the upside. When I present options now, I always include what could go wrong — not to scare people, but because informed decisions are better decisions.
+
+---
+
+#### Story #4: Owning a Mistake and Redesigning Around It
+**Best for:** "Project wasn't going well" | "Received tough feedback" | "Working through ambiguity"
+
+**Setting:** The restaurant dashboard pulled financial data from delivery platforms. I built a straightforward daily sync — fetch today's numbers, store them, done. But the owner started noticing the numbers on my dashboard didn't match the platform reports. After investigating, I discovered that delivery platforms quietly adjust records days after the original transaction — chargebacks, fee corrections, refund adjustments. My original design didn't account for this, and the dashboard was silently accumulating errors. The owner makes real business decisions from this data, so this wasn't a minor bug — it was a trust problem.
+
+**Action:** I could have patched it with a quick fix, but the root cause was a flawed assumption in my original design. I owned that. I told the owner: "The numbers have been slightly off because I didn't account for how these platforms retroactively change data. Here's how I'm going to fix it." I redesigned the sync to automatically re-check and correct the last three days of records on every run. I also made the system resilient so that one bad record couldn't take down the entire sync. The key communication decision was being upfront about the mistake rather than quietly fixing it — the owner's trust was more important than my ego.
+
+**Outcome:** The owner now trusts the dashboard completely and makes staffing and menu decisions from it. Being transparent about the mistake actually strengthened our working relationship. They told me they appreciated the honesty. The lesson: when something goes wrong, the fastest way to rebuild trust is to explain what happened, take responsibility, and show the fix — not to hide it and hope nobody notices.
+
+> **Follow-up ready:** *"How did you feel about telling the owner about the mistake?"* — Honestly, a little uncomfortable. Nobody likes admitting they got something wrong. But I've learned that the short-term discomfort of owning a mistake is way better than the long-term damage of lost trust when someone discovers it on their own.
+
+---
+
+#### Story #8: Catching Yourself and Changing Course
+**Best for:** "Received tough feedback" | "Changed your mind" | "Self-awareness"
+
+**Setting:** The dashboard's data sync took about two minutes. It worked perfectly — every record synced correctly. But the owner kept clicking the sync button again and again, thinking it was broken, because there was no feedback during the wait. My first instinct was to dismiss it: "The system works fine. They just need to be patient."
+
+**Action:** But I caught myself. That's the kind of thinking that makes engineers build things that are technically correct but frustrating to use. Instead of trusting my assumption, I asked the owner directly: "What would make you feel confident that this is working?" Their answer surprised me — they didn't want technical details about what was happening behind the scenes. They wanted to know which store was being updated and roughly how far along it was. That completely changed what I built. If I hadn't asked, I would have built a generic progress bar showing technical steps. Instead, I built exactly what they told me they needed.
+
+**Outcome:** The re-clicking stopped completely. The owner said the dashboard "feels faster" even though the actual sync time didn't change. The meta-lesson is about self-awareness: I almost let my engineering perspective override the user's reality. The moment I caught that instinct and chose to ask instead of assume was the moment the solution became right. I try to watch for that impulse now in every project — "am I solving the problem, or am I solving what I *think* the problem is?"
+
+---
+
+### Top 20 Questions for This Round
+
+| # | Question | Best Story | Key Point to Hit |
+|---|---|---|---|
+| 1 | Conflict with a teammate — how did you handle it? | #6 Unconventional Approach | Listened to their concerns first, built case around their values |
+| 2 | Collaborate across teams or disciplines | #9 Daily Log Form | Iterated directly with non-technical end users over multiple rounds |
+| 3 | Disagree with your manager's decision | #7 Risky Path | Presented both options honestly, let them decide with full info |
+| 4 | Received tough feedback — how did you respond? | #9 Daily Log Form (v1 failed) | Took the feedback, didn't take it personally, iterated |
+| 5 | Explain technical concepts to non-technical people | #6 Unconventional Approach | Framed as cost/accuracy/control, not technical details |
+| 6 | Project wasn't going well — what did you do? | #4 Untrustworthy Data | Owned the flaw in my design, was transparent, redesigned |
+| 7 | Stay aligned across time zones / remote work | #9 Daily Log Form | Async feedback loops, checking back after each change |
+| 8 | Give difficult feedback to someone | #6 Unconventional Approach | Framed as "here are two options" not "you're wrong" |
+| 9 | Describe your communication style | All stories | "I listen first, present options honestly, and let the best reasoning win" |
+| 10 | Time you had to persuade someone | #6 Unconventional Approach | Met them where they were, addressed their priorities not mine |
+| 11 | How do you handle working with someone whose style is very different from yours? | #9 Daily Log Form | Adapted my approach to match how managers work (mobile, end of shift, quick taps) |
+| 12 | Tell me about a time you made a mistake in communication | #4 Untrustworthy Data | Didn't surface the data accuracy issue soon enough — learned to be upfront faster |
+| 13 | How do you build trust with new teammates or stakeholders? | #7 Risky Path | Being honest about downsides, not just selling the upside |
+| 14 | Describe a time you had to say "I don't know" or "I was wrong" | #8 Siding with User | Caught myself dismissing a UX issue, admitted my instinct was wrong |
+| 15 | How do you keep stakeholders updated on progress? | #2 Real-Time Progress | Built live updates; for people, I believe in proactive status over silence |
+| 16 | Tell me about a time you helped someone else grow or succeed | #9 Daily Log Form | Empowered managers to give structured input — elevated their voice in the business |
+| 17 | How do you handle ambiguity in requirements? | #4 Untrustworthy Data / #5 Reverse-Eng | Started building, discovered the real requirements through real data |
+| 18 | Describe a time you had to adapt your communication for a different audience | #6 Unconventional Approach | Same recommendation, completely different framing for a non-technical owner |
+| 19 | What's your approach when someone pushes back on your idea? | #6 Unconventional Approach | "What if they said no? I'd build their way and track data for a future conversation" |
+| 20 | Tell me about a time you dropped the ball. What did you learn? | #4 Untrustworthy Data | Original sync design was flawed, owned it, told the owner, redesigned from scratch |
+
+---
+
+### 60-Second Cheat Sheet (Last-Minute Review)
+
+**My core narrative for this round (recruiter flagged: support the team/leadership, teamwork):**
+- **I support the team by making others' jobs easier.** I built the daily log form so managers could contribute structured data. I laid out options clearly so the owner could make informed decisions. I don't just do my work — I make the people around me more effective.
+- **I support leadership by being honest and trustworthy.** When the data was wrong, I told the owner directly. When the risky path had downsides, I didn't hide them. Leaders can only make good decisions when the people around them give straight information.
+- **I listen before I advocate.** In every disagreement, I start by understanding what the other person values — then I build my case around their priorities, not mine.
+- **I treat feedback as the most useful input, not criticism.** When the daily log form v1 failed, when the dashboard numbers were wrong, when the user kept re-clicking — each one taught me something I couldn't have figured out alone.
+
+**If you blank on a question, start with:** "That reminds me of a project where I was building tools for a restaurant owner..." — then pick whichever story fits the theme.
+
+**Remember for Will specifically:**
+- He's remote (NYC, Riot is mostly LA) — distributed/async communication stories will resonate
+- Show you think about *how* you communicate, not just *what* you communicate
+- "We" for team outcomes, "I" for your specific actions
