@@ -307,3 +307,180 @@ Riot uses **S.A.O. (Setting, Action, Outcome)** — their version of STAR. Same 
 | Use heavy technical jargon | Explain impact in human terms | **Teresa is not an engineer, and jargon creates distance.** When you use terms she does not know, she cannot evaluate your story properly. Worse, it can come across as showing off rather than communicating. The goal is for her to understand and remember your story, which means it needs to be told in her language. | **Don't:** "I refactored the HOC pattern to use custom hooks with memoized selectors to prevent unnecessary re-renders in our SSR pipeline." **Do:** "The page was slow because it was doing a lot of unnecessary work behind the scenes. I cleaned up how it processes information, and load time dropped by 60%. Users noticed immediately." |
 | Give a generic "Why Riot?" | Reference specific products, blog posts, or player experiences | **Generic answers signal that you are applying broadly and Riot is just another option.** Riot's culture places enormous value on passion for games and players. If your "Why Riot" could be copy-pasted into an application at any other game company, it will not land. Specificity shows you have actually engaged with Riot as a company, not just as a brand. | **Don't:** "I love games and Riot makes the best ones. The culture seems amazing." **Do:** "I read the engineering blog post about how the League client team rebuilt the champion select experience, and the way they talked about balancing performance with visual fidelity really resonated with how I think about web development." |
 | Sound rehearsed | Be conversational and genuine | **Rehearsed answers feel performative, and Teresa's job is to assess authenticity.** If your answer sounds like you memorized a script, it raises a flag: is this person genuine, or are they just good at interviews? The fix is not to be unprepared — it is to prepare your stories but deliver them naturally, as if you are telling a friend about something interesting that happened at work. Pause, think, vary your pacing. | **Don't:** (speaking rapidly in a single rehearsed block) "In my previous role I identified a user pain point, gathered data, proposed a solution, and delivered a 30% improvement in engagement." **Do:** (conversational pace) "So this was about six months ago... we had just launched a new feature, and I was looking at the analytics and something felt off. The numbers were way lower than we expected. So I started digging in..." |
+
+---
+
+## My Stories Mapped to This Round
+
+### Quick-Reference: Which Story for Which Question?
+
+| Question / Theme | Primary Story | Backup Story |
+|---|---|---|
+| "Put the user first, even when difficult" | Siding with the User (#8) | Daily Log Form (#9) |
+| "Used data to improve a user experience" | Designing for Untrustworthy Data (#4) | Real-Time Progress (#2) |
+| "Good enough vs more polish" | CMS Constraints (#3) | Risky Path vs Safe Path (#7) |
+| "Disagreed with a product decision" | Advocating for the Unconventional Approach (#6) | Risky Path vs Safe Path (#7) |
+| Theme: Advocating for the user | Siding with the User (#8) | Real-Time Progress (#2) |
+| Theme: Going beyond requirements | Real-Time Progress (#2) | Daily Log Form (#9) |
+| Theme: Using data to improve UX | Designing for Untrustworthy Data (#4) | AI Invoice Pipeline (#1) |
+| Theme: Speed vs quality tradeoffs | Risky Path vs Safe Path (#7) | CMS Constraints (#3) |
+
+> **Tip:** Stories #8 and #2 are your strongest for this round — they directly show you asking a real user what they need and acting on it. Lead with these whenever possible.
+
+---
+
+### Story Reframes (Teresa-Friendly — No Jargon)
+
+#### Story #8: Siding with the User Over My Own Assumptions
+**Best for:** "Put the user first" | "Advocating for the user" | "Going beyond requirements"
+
+**Setting:** I built a dashboard for a restaurant owner. One feature synced their financial data from multiple sources — it worked perfectly, but it took about two minutes to complete. During that time, the owner saw nothing but a spinning icon. They kept clicking the button again and again, thinking it was broken.
+
+**Action:** My first instinct was to dismiss it — "the system works fine, they just need to be patient." But I caught myself. That's an engineer's perspective, not the user's. So instead of assuming I knew what they needed, I asked them directly: "What would make you trust that this is working?" Their answer surprised me — they didn't care about technical details. They wanted to know *which store* was being updated and roughly how far along it was. That completely reframed the problem for me. I built live progress updates that showed exactly what they asked for: the store name and a percentage.
+
+**Outcome:** The owner went from anxiously re-clicking to calmly watching progress. The re-clicking stopped completely. The lesson I carry from this: when a user's behavior tells you something is wrong, listen to the behavior, not the engineering metrics. "It works" and "it's good" are different things. This is the same instinct I want to bring to Riot — when a player is struggling with something that technically works, the experience is the bug.
+
+> **Follow-up ready:** *"How do you decide when user feedback should override technical judgment?"* — When someone is struggling with something that technically works, the experience is the problem, even if the code is correct. I ask myself: would I be comfortable if someone I care about had to use this?
+
+---
+
+#### Story #2: Real-Time Progress — Going Beyond the Spec for the User
+**Best for:** "Going beyond requirements" | "Put the user first" | "Good enough vs more polish"
+
+**Setting:** Same restaurant dashboard — the data sync took up to two minutes across multiple sources. The original design just showed a loading spinner. Nobody asked me to fix this. There was no ticket, no complaint filed. But I could see from the owner's behavior that the experience was frustrating.
+
+**Action:** I brought it up with the owner proactively: "I think this wait is going to be a problem — what information would help you feel confident during the sync?" They told me they wanted to see which store was being processed. So I built live progress updates that streamed the current phase and store name in real time. I kept the scope tight — about a day of work — so it didn't slow down the main deliverable. I also made sure the same system worked for both the owner watching in real time and the automated daily sync, so I wasn't maintaining two separate things.
+
+**Outcome:** Support questions about "is the sync broken?" dropped to zero. The owner later told me the dashboard "feels so much faster" — even though the actual sync time didn't change. The perception of speed improved because the user had information instead of silence. This is something I think about a lot for player-facing experiences: sometimes the best performance improvement isn't making something faster — it's making the wait feel purposeful.
+
+---
+
+#### Story #4: Designing for Data You Can't Trust
+**Best for:** "Used data to improve UX" | "Going beyond requirements" | "Put the user first"
+
+**Setting:** The restaurant dashboard pulled financial data from delivery platforms like DoorDash and UberEats. I built a straightforward daily sync — fetch today's numbers, store them, done. But then the owner started noticing the numbers on my dashboard didn't match what the platforms showed. After investigating, I discovered that these platforms quietly adjust financial records days after the original transaction — chargebacks, fee corrections, refund adjustments. My system was silently accumulating errors. The owner makes real business decisions from this data — menu changes, staffing — so inaccurate numbers weren't just a bug, they were a trust problem.
+
+**Action:** I redesigned the entire sync around one assumption: the data will be wrong, and it will change. Every time the system syncs, it re-checks the last three days of records and automatically corrects anything that changed. If a platform adjusts Tuesday's revenue on Thursday, my system catches it on the next sync without anyone needing to do anything. I also made the system resilient — if one batch of records fails, the rest still save correctly, so a single bad record can't take down the whole sync.
+
+**Outcome:** The owner went from manually cross-checking every platform's reports to trusting the dashboard completely. They now make staffing and menu decisions directly from the numbers I provide. The deeper lesson: when you're building something people rely on for real decisions, accuracy isn't a feature — it's the foundation of trust. At Riot's scale, players trusting that stats, rankings, and progression data are accurate is fundamental to the experience feeling fair.
+
+---
+
+#### Story #6: Advocating for an Unconventional Approach
+**Best for:** "Disagreed with a product decision" | "Advocating for the user"
+
+**Setting:** I was building an invoice processing system for the restaurant owner. They received dozens of vendor invoices as PDFs and needed the data extracted for cost tracking. The owner expected me to build individual parsing rules for each vendor — the conventional, "safe" approach. But I could see that with five-plus vendors who frequently change their document layouts, we'd be maintaining dozens of brittle rules that break constantly. I believed a smarter approach existed, but the owner was skeptical — it sounded expensive, unpredictable, and over-engineered.
+
+**Action:** Instead of pushing my preference, I first made sure I understood the owner's actual concerns. They cared about three things: cost, accuracy, and not being dependent on something they didn't understand. So I built my case around *their* priorities, not mine. I showed the cost comparison: pennies per invoice for the new approach versus hours of ongoing maintenance for the old one. I ran both approaches on the same set of real invoices and showed accuracy side by side. And I addressed the "black box" concern by building a confidence system — high-confidence results process automatically, borderline cases get flagged for the owner to review, so they always have visibility and control. I didn't dismiss the old approach — I acknowledged where it works and showed where it breaks down.
+
+**Outcome:** The owner agreed to a one-week pilot. After seeing the system handle a brand-new vendor's invoices without any setup, they were convinced. The key lesson: when you're proposing something people are skeptical about, don't just argue your way is better — show them you understand what *they* value, then demonstrate how your approach serves those same values. I didn't win an argument; I helped someone make an informed decision by meeting them where they were.
+
+> **Follow-up ready:** *"What if they had said no?"* — I would have built the approach they wanted. It's their system, their business. But I would have tracked the maintenance cost over time so we could revisit the decision with real data later. Disagreeing doesn't mean refusing to commit.
+
+---
+
+#### Story #7: Choosing the Risky Path Over the Safe One
+**Best for:** "Speed vs quality tradeoffs" | "Disagreed with a decision" | "Good enough vs more polish"
+
+**Setting:** The restaurant owner needed daily financial reports from one of their platforms. The platform had no way to export data automatically — the only option was to manually log in and download reports every single day. For a multi-location owner checking data daily, this meant dozens of manual downloads per week. I found a way to automate it completely, but the automated approach depended on unofficial access that the platform could break at any time. The safe path was to keep the manual downloads — reliable but tedious. The automated path was faster but fragile.
+
+**Action:** I didn't just pick the risky path and hope for the best. I laid out both options to the owner honestly, including the downsides of my preferred approach. I said: "Option A means you download reports manually every day — it always works but costs you time. Option B means full automation, but it could break if the platform changes something on their end." Then I explained what I'd build to manage the risk: automatic error detection, alerts if something breaks, and keeping the manual download as a fallback. I was transparent that I was recommending the riskier path, and I explained why — the daily time savings add up, and the safety nets make the risk manageable. I let the owner make the final call with full information.
+
+**Outcome:** The owner chose automation. It's been running multiple times a day without anyone touching the platform manually. The lesson: when you're recommending a path that has real tradeoffs, don't downplay the risks — own them, show your mitigation plan, and let the decision-maker decide. People trust you more when you're honest about downsides than when you only sell the upside. At Riot, I'd apply this same transparency when making tradeoffs between shipping speed and experience quality — the team should always know what we're trading and why.
+
+---
+
+#### Story #9: Iterating on a Daily Log Form with the People Who Use It
+**Best for:** "Put the user first" | "How do you gather feedback?" | "Going beyond requirements" | "Simplified something for a non-technical audience"
+
+**Setting:** At Chris N Eddy's, the restaurant managers needed to submit daily closing logs — cash counts, inventory levels, prep completion, bathroom checks. Before I got involved, this was all done through texts and phone calls to the owner. There was no consistent format, things got lost, and the owner had no reliable way to spot trends across locations. I was asked to build a simple form they could fill out at the end of each shift.
+
+**Action:** I built a first version and shared it with the managers. It didn't land. The form had too many fields, the layout was confusing on their phones (which is how they'd access it at closing time), and some inputs required typing when a quick dropdown would've been faster. Instead of guessing what to fix, I went back to the managers directly — the people who'd actually use this every night. Over several rounds of feedback, I simplified the fields, switched text inputs to dropdowns and checkboxes where possible, made sure the form worked smoothly on mobile, and shortened the link so it was easy to bookmark or save. Each time I made changes, I checked back with them: "Is this easier? What's still annoying?" I kept iterating until the managers told me it felt fast and natural to fill out at the end of a busy shift.
+
+**Outcome:** Every manager now uses the form daily. The owner gets consistent, structured data across all locations — no more digging through texts. The key lesson: the people who use a tool every day know more about what it should feel like than the person who builds it. My job wasn't to design the "right" form in isolation — it was to keep showing up, listening, and adjusting until the people who live with it said it works. That's the kind of iteration I want to bring to Riot — building *with* players, not just *for* them.
+
+> **Follow-up ready:** *"How many iterations did it take?"* — Several rounds over a couple of weeks. Each round got smaller — the first was a big simplification, the later ones were fine-tuning things like field order and mobile layout. The point was that I didn't treat "v1 shipped" as done — done was when the managers actually used it without friction.
+
+---
+
+### Bonus Questions You Might Get
+
+**"How do you gather user or player feedback?"**
+→ Use **Story #9** (iterated directly with managers over multiple rounds until the daily log form felt right) or **Story #8** (asked the owner what they needed during sync). Key point: I don't wait for tickets — I go to the people who use the thing and ask them directly, repeatedly.
+
+**"Tell me about a time you simplified something complex for a non-technical audience."**
+→ Use **Story #9** (turned a data collection need into a simple mobile form by iterating with non-technical managers) or **Story #6** (presented a technical comparison using cost and accuracy, not engineering terms). Key point: I build for the person using it, in their language and workflow.
+
+**"Describe a time you made a mistake that affected users. How did you handle it?"**
+→ Use **Story #4** (my original design didn't account for data changes, causing inaccurate numbers the owner relied on). Key point: I didn't just patch it — I redesigned around the assumption that data will be wrong, and turned a trust problem into a trust-building moment.
+
+**"How do you balance what users ask for vs what they actually need?"**
+→ Use **Story #2** (the owner didn't ask for progress updates, but their behavior showed they needed them) and **Story #8** (when I did ask, their answer surprised me — they wanted different info than I assumed). Key point: I use both observation and conversation, because users don't always know what to ask for.
+
+**"Tell me about a time you changed your mind based on someone else's perspective."**
+→ Use **Story #8** (caught myself dismissing a UX issue as "it works fine," then changed my mind when I saw the user's actual experience). Key point: the user's behavior was the most honest feedback — it changed how I think about what "done" means.
+
+**"How do you build empathy for users you've never met?"**
+→ Use **Story #4** (discovered delivery platforms silently change financial data — empathized with the owner making real business decisions from numbers I provided) + **Story #2** (watched user behavior to understand frustration I hadn't experienced myself). Key point: I look at how people actually use the thing, not how I imagine they use it.
+
+**"Tell me about a time you had to ship something you weren't fully proud of. How did you handle it?"**
+→ Use **Story #7** (chose automation over the polished-but-manual path, knowing the automated version was fragile). Key point: I was transparent about the tradeoffs, built safety nets, and planned to improve it over time. Shipping imperfect with a plan is better than not shipping at all.
+
+**"How do you prioritize when everything feels urgent?"**
+→ Use **Story #7** (weighed daily user pain of manual exports vs. long-term fragility risk) + **Story #3** (chose to absorb complexity into code rather than adding infrastructure, because one problem was immediate and the other was hypothetical). Key point: I prioritize by asking "what causes the most pain for the user right now?" and work backward from there.
+
+**"Give me an example of when you went above and beyond for a customer or user."**
+→ Use **Story #9** (multiple rounds of iteration with managers until the daily log form felt right — nobody asked for that level of polish) or **Story #2** (built progress updates that weren't in any ticket). Key point: "above and beyond" for me means staying in the conversation with the user until they say it's right, not just shipping something and moving on.
+
+**"How do you handle a situation where the user wants something that's technically impractical?"**
+→ Use **Story #8** follow-up: "I listen first, then explain the constraint honestly and propose an alternative that addresses their underlying need. Usually they don't care about the specific solution — they care about the problem being solved." Can also reference **Story #3** (the content team wanted rich data structures but the system only supported flat fields — instead of saying no, I found a way to give them what they needed within the constraint).
+
+**"What does 'player experience first' mean to you?"**
+→ This is a values question, not a story question. Answer with a principle, then prove it with a quick example: "It means that when there's a gap between what the system does and what the person using it experiences, the experience is what matters. For example — [pivot into Story #8 briefly] — the sync worked perfectly, but the user's experience of staring at a spinner for two minutes was broken. The code was right. The experience wasn't. That's what I fix."
+
+**"Describe a time you had to learn something new quickly to solve a user problem."**
+→ Use **Story #5** (reverse-engineered an undocumented platform to replace manual daily exports — learned the internal structure through trial and error, driven by the user's daily pain point). Reframe for Teresa: "The restaurant owner was spending 20 minutes every day manually downloading reports. To automate it, I had to figure out how the platform worked behind the scenes — no documentation, just experimentation. The motivation was simple: 20 minutes a day, every day, adds up. That was enough reason to dig in."
+
+**"How do you know when a feature is actually helping users vs just looking good on paper?"**
+→ Use **Story #4** (discovered the dashboard numbers were wrong — it looked great on paper but was silently failing users) + **Story #9** (didn't consider the form done until managers actually used it daily without friction). Key point: I measure success by what users *do*, not what the feature *does*. If the behavior doesn't change, the feature didn't work.
+
+**"Tell me about a time you received negative feedback from a user. How did you respond?"**
+→ Use **Story #9** (first version of the daily log form didn't land — too many fields, bad on mobile. Took the feedback, iterated, kept going back). Key point: negative feedback is the most useful kind. The managers weren't being difficult — they were telling me what "done" actually looks like. I thanked them and kept iterating.
+
+---
+
+### All 20 Questions at a Glance
+
+| # | Question | Best Story |
+|---|---|---|
+| 1 | Put the user first, even when difficult | #8 Siding with User |
+| 2 | Used data to improve a user experience | #4 Untrustworthy Data |
+| 3 | Good enough vs more polish | #3 CMS Constraints / #7 Risky Path |
+| 4 | Disagreed with a product decision | #6 Unconventional Approach |
+| 5 | Product you love, what would you change | Personal — prep your own |
+| 6 | Why Riot? | Personal — prep your own |
+| 7 | How do you gather user feedback? | #9 Daily Log Form |
+| 8 | Simplified something for non-technical audience | #9 Daily Log Form / #6 |
+| 9 | Mistake that affected users | #4 Untrustworthy Data |
+| 10 | What users ask for vs what they need | #2 Progress / #8 Siding |
+| 11 | Changed your mind based on someone's perspective | #8 Siding with User |
+| 12 | Build empathy for users you've never met | #4 Untrustworthy Data / #2 |
+| 13 | Ship something you weren't fully proud of | #7 Risky Path |
+| 14 | Prioritize when everything feels urgent | #7 Risky Path / #3 CMS |
+| 15 | Went above and beyond for a user | #9 Daily Log Form / #2 |
+| 16 | User wants something technically impractical | #8 / #3 CMS Constraints |
+| 17 | What does "player experience first" mean to you? | Principle + #8 as proof |
+| 18 | Learned something new quickly for a user problem | #5 Reverse-Engineering |
+| 19 | How do you know a feature is actually helping? | #4 / #9 Daily Log Form |
+| 20 | Received negative feedback from a user | #9 Daily Log Form |
+
+---
+
+### 60-Second Cheat Sheet (Last-Minute Review)
+
+**My core narrative across all stories:**
+- **I ask the user before assuming I know the answer.** When I built progress updates, I asked the owner what they wanted to see — and their answer was different from what I would have guessed.
+- **I use data and honesty — including downsides — to build trust.** Whether it's showing cost comparisons to a skeptical owner or being transparent about risks, I earn trust by being straight with people.
+- **I absorb complexity so users never have to deal with it.** Whether it's automatically correcting stale data, handling vendor format changes invisibly, or keeping manual fallbacks ready — the user's experience should be simple even when the system behind it isn't.
+
+**If you blank on a question, start with:** "That reminds me of something that happened while I was building a dashboard for a restaurant owner..." — all your stories start from the same project, so this buys you time to pick the right one.
