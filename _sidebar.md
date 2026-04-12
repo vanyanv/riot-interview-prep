@@ -8,5 +8,6 @@
 - **Resources**
   - [Frontend System Design Prep](frontend-system-design-prep.md)
   - [🎯 FSD Study Mode](study.html ':ignore')
+  - [3-Day Study Plan (Deep Tech)](study-plan-deep-tech.md)
   - [LeetCode Problems](leetcode-problems.md)
   - [Crowd-Sourced Intel](crowd-sourced-intel.md)

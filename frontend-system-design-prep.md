@@ -1420,6 +1420,285 @@ const mutation = useMutation({
 
 ---
 
+## Walkthrough 7: Content Management Dashboard
+
+*"Design an internal dashboard for managing game or esports content — articles, schedules, featured content."*
+
+This is the "design an app for viewing/managing content" scenario the recruiter described. It's a classic CRUD application with some interesting frontend challenges.
+
+---
+
+### Requirements
+
+**Functional:**
+- View, create, edit, and publish content (articles, match schedules, featured banners)
+- Content workflow: Draft → Review → Published (with approval gates)
+- Rich text editor for articles (headings, images, embeds, code blocks)
+- Media library — upload and manage images/videos
+- Role-based access: Editor, Reviewer, Publisher, Admin
+- Content calendar — visual timeline of scheduled publications
+- Preview mode — see content as it will appear on the live site
+- Audit log — who changed what, when
+- Bulk operations — publish/unpublish/delete multiple items
+
+**Non-functional:**
+- Latency: CRUD operations should feel instant (optimistic updates)
+- Concurrent editing: Handle two editors working on the same article
+- Autosave: Don't lose work — save drafts automatically
+- Search: Find content quickly across hundreds/thousands of items
+- Responsive: Usable on tablets (editors sometimes work from events)
+
+---
+
+### System Architecture
+
+```
+┌──────────┐    ┌────────┐    ┌──────────────┐    ┌──────────┐
+│  Client  │───▶│  Load  │───▶│  CMS API     │───▶│ Postgres │
+│ (Browser)│    │Balancer│    │  (Node/Go)   │    │(content, │
+└────┬─────┘    └────────┘    └──────┬───────┘    │ users,   │
+     │                               │            │ audit)   │
+     │                         ┌─────▼─────┐     └──────────┘
+     │                         │   Redis    │
+     │                         │(session,   │     ┌──────────┐
+     │                         │ locks,     │     │   S3     │
+     │                         │ cache)     │     │ (media)  │
+     │                         └───────────┘     └──────────┘
+     │
+     │    ┌──────────────┐
+     └───▶│  CDN (media  │
+          │  + previews) │
+          └──────────────┘
+```
+
+- **CMS API:** Standard CRUD service. Handles content operations, role checks, workflow transitions. Stateless, horizontally scalable.
+- **Postgres:** Content table (id, title, body_json, status, author_id, created_at, updated_at, published_at, version). Audit log table (content_id, user_id, action, diff, timestamp). Users/roles tables.
+- **Redis:** (1) Distributed locks for concurrent editing — prevent two editors saving at the same time. (2) Session cache. (3) Content list cache with short TTL.
+- **S3 + CDN:** Media uploads go to S3 via presigned URLs. CDN serves media. Preview builds stored as static files in S3.
+- **No Kafka/WebSocket needed:** This is an internal tool with low user count. Polling or simple refetch is fine for updates.
+
+**Say:** *"This is an internal tool — maybe 50-100 users, not millions. So I'd keep the architecture simple. No WebSocket, no message queues. Standard REST/GraphQL API with Postgres. The complexity is in the frontend: rich text editing, content workflows, and concurrent editing."*
+
+---
+
+### Component Tree
+
+```
+App
+├── AuthProvider (role-based — Editor, Reviewer, Publisher, Admin)
+├── Layout
+│   ├── Sidebar
+│   │   ├── NavItem: Dashboard (overview / stats)
+│   │   ├── NavItem: Content (list + CRUD)
+│   │   ├── NavItem: Media Library
+│   │   ├── NavItem: Calendar
+│   │   └── NavItem: Settings (Admin only)
+│   └── MainContent (routed)
+│
+├── Routes
+│   ├── / → DashboardPage
+│   │   ├── StatsCards (published today, in review, drafts)
+│   │   ├── RecentActivity (audit log feed)
+│   │   └── MyDrafts (quick access to user's WIP)
+│   │
+│   ├── /content → ContentListPage
+│   │   ├── SearchBar (full-text search)
+│   │   ├── FilterBar (status, author, date, type)
+│   │   ├── BulkActionBar (shown when items selected)
+│   │   └── ContentTable
+│   │       └── ContentRow (title, status badge, author, date, actions)
+│   │
+│   ├── /content/new → ContentEditorPage
+│   │   ├── EditorToolbar (bold, italic, heading, image, embed)
+│   │   ├── TitleInput
+│   │   ├── RichTextEditor (TipTap or Slate.js — JSON-based content)
+│   │   ├── MetadataPanel (sidebar — tags, category, SEO, featured image)
+│   │   ├── StatusBar (Draft | "Autosaved 30s ago" | "John is also editing")
+│   │   └── ActionBar
+│   │       ├── SaveDraftButton
+│   │       ├── SubmitForReviewButton (Editor role)
+│   │       ├── PublishButton (Publisher role only)
+│   │       └── PreviewButton (opens preview in new tab)
+│   │
+│   ├── /content/:id/edit → ContentEditorPage (same component, edit mode)
+│   │
+│   ├── /media → MediaLibraryPage
+│   │   ├── UploadDropzone (drag-and-drop, multi-file)
+│   │   ├── MediaGrid (thumbnail previews)
+│   │   └── MediaDetail (sidebar — filename, dimensions, usage, delete)
+│   │
+│   └── /calendar → CalendarPage
+│       └── CalendarGrid (month/week view with content items on scheduled dates)
+│
+└── Shared
+    ├── RoleGate ({ role, children }) — hides UI based on user role
+    ├── ConfirmModal — for destructive actions
+    └── Toast — success/error feedback
+```
+
+---
+
+### State Design
+
+| State | Location | Why |
+|-------|----------|-----|
+| Content list + filters | React Query (`['content', filters]`) + URL params | Server data. URL params for shareable filtered views. |
+| Content editor document | Local state (TipTap/Slate internal state) | Rich text editors manage their own state. |
+| Autosave status | Local state (idle/saving/saved/error) | UI feedback only. |
+| Unsaved changes flag | Derived from editor dirty state | Prevent navigation. `useBlocker` + `beforeunload`. |
+| Selected items (for bulk ops) | Local state (`Set<id>`) | Ephemeral — clears on navigation. |
+| Current user + role | `AuthContext` | Drives role-based UI visibility. |
+| Media library selections | Local state | Ephemeral. |
+| Editing lock (who's editing) | Server-side (Redis) + polled via React Query | Prevents concurrent save conflicts. |
+
+**Content document storage:**
+The rich text editor stores content as a JSON AST (not HTML). This is important because:
+- JSON is easier to validate, migrate, and transform server-side
+- You can render the same content to HTML (web), AMP (mobile), email, or RSS
+- Version diffs are meaningful (structured data, not string diffs)
+
+```json
+{
+  "type": "doc",
+  "content": [
+    { "type": "heading", "attrs": { "level": 1 }, "content": [{ "type": "text", "text": "Worlds 2025 Preview" }] },
+    { "type": "paragraph", "content": [{ "type": "text", "text": "The biggest tournament of the year..." }] },
+    { "type": "image", "attrs": { "src": "https://cdn.example.com/worlds.webp", "alt": "Worlds 2025 logo" } }
+  ]
+}
+```
+
+**Say:** *"I'd store content as a JSON document tree, not raw HTML. This gives us structured data we can validate, diff for version history, and render to different formats. TipTap uses ProseMirror under the hood which stores documents as exactly this kind of JSON tree."*
+
+---
+
+### API Contract
+
+```graphql
+query GetContentList($filter: ContentFilter, $page: Int, $limit: Int) {
+  contentList(filter: $filter, page: $page, limit: $limit) {
+    items {
+      id, title, status, author { name, avatar }
+      updatedAt, publishedAt, type
+    }
+    totalCount, pageCount
+  }
+}
+
+query GetContent($id: ID!) {
+  content(id: $id) {
+    id, title, body, status, version
+    author { name }, updatedAt
+    metadata { tags, category, seoTitle, seoDescription, featuredImage }
+    editLock { lockedBy { name }, lockedAt, expiresAt }
+  }
+}
+
+mutation SaveDraft($id: ID, $input: ContentInput!) {
+  saveDraft(id: $id, input: $input) {
+    id, version, updatedAt
+  }
+}
+
+mutation SubmitForReview($id: ID!) {
+  submitForReview(id: $id) { id, status }
+}
+
+mutation Publish($id: ID!) {
+  publish(id: $id) { id, status, publishedAt }
+}
+
+mutation AcquireEditLock($id: ID!) {
+  acquireEditLock(id: $id) {
+    success, lock { lockedBy { name }, expiresAt }
+  }
+}
+
+mutation ReleaseEditLock($id: ID!) {
+  releaseEditLock(id: $id) { success }
+}
+
+# Media
+mutation GetUploadUrl($filename: String!, $contentType: String!) {
+  getUploadUrl(filename: $filename, contentType: $contentType) {
+    uploadUrl, publicUrl
+  }
+}
+```
+
+---
+
+### Data Flow — Editing and Publishing an Article
+
+**Opening the editor:**
+1. User clicks "Edit" on an article
+2. `AcquireEditLock` mutation fires — server checks if anyone else has the lock
+3. **If locked by another user:** Show "John is currently editing. Open in read-only mode?" with option to request the lock
+4. **If available:** Lock acquired (Redis key with 5-min TTL, refreshed by heartbeat). Navigate to editor
+5. Load content via `GetContent` query. Populate TipTap editor
+
+**Autosave flow:**
+1. User types in the editor
+2. After 5 seconds of inactivity (debounce), fire `SaveDraft` mutation with current document JSON
+3. StatusBar shows "Saving..." → "Saved at 2:34 PM"
+4. If save fails (network error): StatusBar shows "Save failed — retrying..." Queue retry with exponential backoff
+5. **Version conflict:** If server version > client version (someone else saved), show conflict resolution UI
+
+**Publishing flow:**
+1. Editor clicks "Submit for Review" → status changes to `IN_REVIEW`
+2. Reviewer sees it in their queue, reviews content
+3. Reviewer clicks "Approve" → status changes to `APPROVED`
+4. Publisher clicks "Publish" → status changes to `PUBLISHED`, `publishedAt` set
+5. CDN cache invalidated for the content page. Content appears on the live site
+
+**Lock heartbeat:**
+```js
+useEffect(() => {
+  const interval = setInterval(() => {
+    renewEditLock(contentId);  // Refreshes the Redis TTL
+  }, 2 * 60 * 1000);  // Every 2 minutes
+  
+  return () => {
+    clearInterval(interval);
+    releaseEditLock(contentId);  // Release on unmount
+  };
+}, [contentId]);
+
+// Also release on tab close
+useEffect(() => {
+  const handleUnload = () => releaseEditLock(contentId);
+  window.addEventListener('beforeunload', handleUnload);
+  return () => window.removeEventListener('beforeunload', handleUnload);
+}, [contentId]);
+```
+
+---
+
+### Performance
+
+- **Rich text editor:** TipTap/Slate are heavy dependencies. Lazy-load the editor component — the content list page doesn't need it. `const Editor = React.lazy(() => import('./RichTextEditor'))`
+- **Content table:** Server-side pagination (not loading all content at once). 25 items per page. Sort and filter server-side.
+- **Media library:** Virtualized grid for large media collections. Thumbnails generated server-side (different sizes). Lazy-load images below the fold.
+- **Autosave:** Debounce saves (5s after last keystroke). Only send the document if it actually changed (diff check). Send only the delta if the editor supports it (TipTap/Yjs does).
+- **Preview:** Generate preview as a static page on save. Open in a new tab via a preview URL. Cache with short TTL.
+- **Code split by route:** Dashboard, content list, editor, media library, and calendar are all separate chunks.
+
+---
+
+### Edge Cases
+
+- **Concurrent editing:** Pessimistic locking (lock per document) is simplest for an internal tool. If you need real-time collaboration (Google Docs style), use CRDTs via Yjs + TipTap. For 50-100 users, pessimistic locking is fine.
+- **Autosave + navigation:** If the user navigates away with unsaved changes, autosave fires immediately before `beforeunload`. Fallback: store latest state in `localStorage` and offer "Restore unsaved changes?" on next visit.
+- **Lock expiry:** If an editor walks away and the lock expires (5-min TTL with no heartbeat), another editor can take the lock. The first editor returns and tries to save — server rejects with "Lock expired. Your changes may conflict." Show a diff and let them merge.
+- **Large media uploads:** Show progress bar. Allow cancellation. Resume uploads with tus protocol for large files. Validate file type and size client-side before upload.
+- **Content versioning:** Every save creates a new version. Show version history with diffs. Allow rollback to any previous version.
+- **Bulk operations:** "Unpublish 50 articles" — fire as a batch mutation. Show progress bar. Handle partial failures: "47 of 50 unpublished. 3 failed (in use by homepage)."
+- **Permissions in UI:** Use `RoleGate` component to hide buttons the user can't use. But **always enforce on the server** — the UI is cosmetic, the server is the authority. An Editor who inspects the DOM and finds the Publish button's mutation endpoint should still get a 403.
+
+**Say to Fernando:** *"The interesting challenge in a CMS is balancing simplicity with power. Most content editors aren't engineers — they need a simple, forgiving interface. Autosave, undo, version history, and conflict prevention are all about making the tool safe to use. You should never lose work, and you should always be able to go back. I'd invest heavily in the autosave and versioning infrastructure because that's what earns trust from the content team."*
+
+---
+
 ## Quick Reference: What Fernando Might Ask
 
 If you get a question not covered above, use the framework from Part 1. Here's how to start any question:

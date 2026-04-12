@@ -271,6 +271,22 @@ const SECTION_METADATA = [
     ],
   },
   {
+    id: 'reference-round-format',
+    group: 'Reference',
+    navTitle: 'Round Format Intel',
+    eyebrow: 'REFERENCE · FORMAT',
+    title: 'Round Format Intel — Which Shape Is This Round?',
+    sourceHeading: 'Round Format Intel',
+    sourceFile: 'study/interview-intel.md',
+    readTimeMin: 5,
+    interviewerSignal: 'Know which of three formats you\'re in before you start answering',
+    chunks: [
+      { id: 'three-formats', label: 'Three Formats', sourceSubheading: 'The Three Formats', readTimeMin: 2 },
+      { id: 'detect-format', label: 'Detect in 60s', sourceSubheading: 'How to Detect the Format in the First 60 Seconds', readTimeMin: 1 },
+      { id: 'universal-rule', label: 'Universal Rule', sourceSubheading: 'The Universal Rule', readTimeMin: 1 },
+    ],
+  },
+  {
     id: 'reference-fernando-faq',
     group: 'Reference',
     navTitle: 'Fernando FAQ',

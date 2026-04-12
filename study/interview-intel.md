@@ -77,3 +77,42 @@ The language Riot's interviewers respond to: **every technical decision justifie
 **Say:** *"Whenever I make a design call in this interview, I want to close the loop back to the player. Code-splitting isn't there because it's elegant — it's there because a player on 4G in Rio shouldn't wait six seconds to see the bracket. Every decision I make, I'm asking: what does this feel like when you're the one holding the phone?"*
 
 **The meta-signal:** when you frame every technical choice this way, Fernando isn't just hearing "this candidate knows the tech." He's hearing "this candidate thinks like someone we'd trust with a feature that touches 100 million players." That's the gap between good and great.
+
+---
+
+## Round Format Intel
+
+Riot does not officially document a "system design" round anywhere on their careers site — the words "system design," "HLD," and "architecture round" are absent from the Interviewing at Riot pages. That silence is itself a signal: this round arrives in multiple shapes depending on interviewer, team, and geo. The three shapes below come from cross-referencing the recruiter's own framing, Blind / Glassdoor / Prepfully reports, and a P3 SWE interview guide. Your job in the first 60 seconds is to recognize which one you're in and switch modes cleanly — don't force the 8-step frontend framework onto a backend HLD prompt, and don't walk a component tree when Fernando is firing breadth questions.
+
+---
+
+### The Three Formats
+
+**Format A — Frontend application design.** This is the recruiter's own framing: *"how to design applications — things like login flows, viewing an app."* It's the primary bet and the reason the 8-step framework and seven walkthroughs exist. You get one open-ended prompt for a user-facing product and drive it end-to-end: requirements → architecture → component tree → state → API contract → data flow → performance → edge cases. Every walkthrough in this study app is training for this format. If Fernando opens with "design the login experience" or "design a match viewing page," you're in Format A — run the framework.
+
+**Format B — Classic backend HLD.** This is the modal format across third-party reports (Blind, Glassdoor, Prepfully, scaleengineer.com's P3 guide, ~5 independent data points). **Rate limiter** is the highest-hit specific prompt — one accepted-offer Riot writeup confirms this exact phrasing. Also plausible: TinyURL / micro-posting service, distributed cache, real-time analytics for an online game, multiplayer matchmaking service, leaderboard at scale. 60 minutes, one prompt, Draw.io, one interviewer, trade-off and bottleneck probing. Reported as easier than FAANG. If you hear a prompt shaped like this, **drop the 8-step frontend framework** and run standard HLD: clarify NFRs (throughput, latency targets, consistency requirements), sketch the main components, pick storage and justify the choice, identify bottlenecks, discuss scaling and failure modes. The `Say:` opener from Format A still works — you're just adapting the body.
+
+**Format C — Breadth "lightning round."** A minority of Blind reports describe this and the round's own name ("Deep Tech") fits the shape. Not one prompt but many rapid, pointed questions: SSR vs CSR, when to pick WebSockets vs SSE vs long polling, CEF architecture, caching layers (CDN → edge → app → DB), CAP trade-offs, Brotli vs gzip, cold starts, HTTP/2 vs HTTP/3, event loop phases, React Fiber. The separate [round-5-deep-tech.md](round-5-deep-tech.md) doc is already training for this — no extra prep needed. Recognize it by the cadence: if Fernando is firing questions rather than asking one open design prompt, you're in Format C. The right move is 60–90 seconds of confident depth per topic with a specific example, *not* "let me clarify requirements first." Forcing the framework onto a breadth round kills the cadence and wastes Fernando's time.
+
+---
+
+### How to Detect the Format in the First 60 Seconds
+
+Listen for the shape of the first prompt, not the content. The discriminator is whether it names a user-facing product, a backend capability, or a technical topic:
+
+- **"Design a [user-facing product]"** — login flow, match viewing page, Pick'Em, dashboard, settings page → **Format A**, run the 8-step framework.
+- **"Design a [backend capability]"** — rate limiter, distributed cache, matchmaking service, leaderboard service, notification fan-out → **Format B**, run classic HLD.
+- **No single design prompt at all** — Fernando opens with "tell me what happens when you type a URL" or "walk me through the Node.js event loop" or "when would you use WebSockets vs SSE" → **Format C**, answer each with depth-per-topic, don't force a design arc.
+- **Ambiguous prompt** — ask one clarifying question: *"Would you like me to drive this as a full user-facing application — walking the component tree, state, and data flow — or as a backend system-design exercise focused on scaling, storage, and failure modes?"* This lets Fernando steer, and it's a confidence move, not a hedge. You're showing you can run either format cleanly.
+
+**Say:** *"Before I dive in, let me clarify whether you want me to drive this as a full user-facing application — walking the component tree, state, and data flow — or as a backend system-design exercise focused on scaling, storage, and failure modes. Either way I'll thread player impact through the decisions."*
+
+This one sentence doubles as format detection and as a player-first anchor for the rest of the round. Use it verbatim in the first 60 seconds if the prompt is at all ambiguous.
+
+---
+
+### The Universal Rule
+
+Regardless of format, **thread player impact through every technical decision you make**. Latency under Worlds-scale load. Live-ops availability when a region's API pod dies mid-match. Fairness when matchmaking is picking teams. Localization when the merch checkout fires across 13 languages. Every decision closes the loop with *"…which means for the player, [X]"* — same formula as the Player-First Framing chunk earlier in this doc, applied to whichever format the round lands on.
+
+This is the one thread running through every Riot round — the Round 3 Player Focus behavioral, the frontend design round, and this one — and it's what Riot's S.A.O. (Setting / Action / Outcome) framing is asking you to do even in a technical round. The technical win is always a side effect of a player outcome, never the other way around. If you remember nothing else from this card, remember that.
