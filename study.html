@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Frontend System Design Study · Riot Prep</title>
+  <meta name="description" content="Active-recall study tool for Round 5 — Frontend System Design prep">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+  <link rel="stylesheet" href="study/styles.css">
+</head>
+<body>
+  <div id="app" x-data="studyApp()" x-init="init()" x-cloak>
+
+    <!-- Top bar -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <span class="brand-mark">⚡</span>
+        <span class="brand-text">Frontend System Design</span>
+        <span class="brand-sub">Round 5 · Fernando Micalli</span>
+      </div>
+      <div class="topbar-right">
+        <div class="progress-pill">
+          <div class="progress-bar"><div class="progress-fill" :style="`width: ${overallProgress()}%`"></div></div>
+          <span class="progress-label" x-text="overallProgress() + '%'"></span>
+        </div>
+        <button class="streak-pill" title="Study streak">
+          <span class="streak-flame">🔥</span>
+          <span x-text="state.streak.current"></span>
+        </button>
+        <button class="mistakes-pill" @click="openMistakes()" :class="{ 'has-mistakes': state.mistakes.length > 0 }">
+          <span class="mistakes-icon">⚠</span>
+          <span>Review Mistakes</span>
+          <span class="mistakes-count" x-text="state.mistakes.length"></span>
+        </button>
+      </div>
+    </header>
+
+    <div class="main-grid">
+      <!-- Left sidebar nav -->
+      <aside class="sidenav">
+        <template x-for="group in sectionGroups" :key="group.label">
+          <div class="nav-group">
+            <div class="nav-group-label" x-text="group.label"></div>
+            <template x-for="section in group.sections" :key="section.id">
+              <button
+                class="nav-item"
+                :class="{ active: currentSectionId === section.id }"
+                @click="goToSection(section.id)">
+                <span class="nav-status" x-text="statusIcon(section.id)"></span>
+                <span class="nav-title" x-text="section.navTitle"></span>
+              </button>
+            </template>
+          </div>
+        </template>
+
+        <div class="nav-footer">
+          <div class="nav-footer-label">Overall</div>
+          <div class="nav-progress-bar"><div class="nav-progress-fill" :style="`width: ${overallProgress()}%`"></div></div>
+          <div class="nav-footer-stats">
+            <span x-text="studiedCount()"></span>/<span x-text="sections.length"></span> studied
+          </div>
+        </div>
+      </aside>
+
+      <!-- Main content -->
+      <main class="content" x-ref="content">
+
+        <!-- Mistakes review view -->
+        <template x-if="view === 'mistakes'">
+          <div class="mistakes-view">
+            <div class="mistakes-header">
+              <button class="back-btn" @click="closeMistakes()">← Back to studying</button>
+              <h1>Review Mistakes</h1>
+              <p class="mistakes-sub">Missed questions stay here until you get them right twice in a row.</p>
+            </div>
+
+            <div class="mistakes-controls">
+              <div class="filter-tabs">
+                <button :class="{ active: mistakeFilter === 'session' }" @click="mistakeFilter = 'session'">This session</button>
+                <button :class="{ active: mistakeFilter === 'today' }" @click="mistakeFilter = 'today'">Today</button>
+                <button :class="{ active: mistakeFilter === 'all' }" @click="mistakeFilter = 'all'">All time</button>
+              </div>
+              <button class="retest-btn" @click="startRetestMistakes()" :disabled="filteredMistakes().length === 0">
+                Retest Mistakes (<span x-text="filteredMistakes().length"></span>)
+              </button>
+            </div>
+
+            <template x-if="weakSections().length > 0">
+              <div class="weak-sections">
+                <h3>Weak sections</h3>
+                <template x-for="ws in weakSections()" :key="ws.id">
+                  <div class="weak-section-row">
+                    <span class="weak-section-name" x-text="ws.title"></span>
+                    <div class="weak-section-bar"><div class="weak-section-fill" :style="`width: ${ws.pct}%`"></div></div>
+                    <span class="weak-section-count" x-text="ws.count + ' miss' + (ws.count === 1 ? '' : 'es')"></span>
+                  </div>
+                </template>
+              </div>
+            </template>
+
+            <template x-if="filteredMistakes().length === 0">
+              <div class="empty-state">
+                <div class="empty-icon">🎯</div>
+                <h3>No mistakes here</h3>
+                <p>Either you haven't made any yet, or you've cleaned them all up. Either way, nice.</p>
+              </div>
+            </template>
+
+            <div class="mistakes-grid">
+              <template x-for="(m, idx) in filteredMistakes()" :key="m.id">
+                <div class="mistake-card" :class="'mistake-type-' + m.type">
+                  <div class="mistake-card-header">
+                    <span class="mistake-type-badge" x-text="m.type.toUpperCase()"></span>
+                    <span class="mistake-section-badge" x-text="sectionTitle(m.section)"></span>
+                    <span class="mistake-time" x-text="timeAgo(m.timestamp)"></span>
+                  </div>
+                  <div class="mistake-question" x-text="m.question"></div>
+                  <template x-if="m.yourAnswer">
+                    <div class="mistake-your"><span class="label">✗ You</span> <span x-text="m.yourAnswer"></span></div>
+                  </template>
+                  <div class="mistake-correct"><span class="label">✓ Answer</span> <span x-text="m.correctAnswer"></span></div>
+                  <template x-if="m.explanation">
+                    <div class="mistake-explanation" x-text="m.explanation"></div>
+                  </template>
+                  <div class="mistake-card-footer">
+                    <span class="streak-indicator">
+                      Streak: <span x-text="m.correctStreak || 0"></span>/2
+                    </span>
+                    <button class="mini-link" @click="goToSection(m.section); closeMistakes();">Go to section →</button>
+                  </div>
+                </div>
+              </template>
+            </div>
+
+            <template x-if="retestActive">
+              <div class="retest-overlay" @click.self="retestActive = false">
+                <div class="retest-modal">
+                  <div class="retest-header">
+                    <h2>Retest · <span x-text="(retestIdx + 1) + ' / ' + retestQueue.length"></span></h2>
+                    <button class="close-btn" @click="retestActive = false">×</button>
+                  </div>
+                  <template x-if="retestQueue[retestIdx]">
+                    <div class="retest-body">
+                      <div class="retest-question" x-text="retestQueue[retestIdx].question"></div>
+                      <template x-if="retestQueue[retestIdx].type === 'quiz' && retestQueue[retestIdx].options">
+                        <div class="retest-options">
+                          <template x-for="opt in retestQueue[retestIdx].options" :key="opt">
+                            <button
+                              class="retest-option"
+                              :class="retestFeedback && (opt === retestQueue[retestIdx].correctAnswer ? 'correct' : (opt === retestAnswer ? 'wrong' : ''))"
+                              :disabled="retestFeedback"
+                              @click="submitRetest(opt)"
+                              x-text="opt">
+                            </button>
+                          </template>
+                        </div>
+                      </template>
+                      <template x-if="retestQueue[retestIdx].type !== 'quiz'">
+                        <div class="retest-recall">
+                          <textarea x-model="retestAnswer" placeholder="Type your answer..." :disabled="retestFeedback"></textarea>
+                          <template x-if="!retestFeedback">
+                            <button class="reveal-btn" @click="revealRetest()">Reveal Answer</button>
+                          </template>
+                          <template x-if="retestFeedback">
+                            <div class="retest-reveal-box">
+                              <div class="retest-model">
+                                <div class="label">Model Answer</div>
+                                <div x-text="retestQueue[retestIdx].correctAnswer"></div>
+                              </div>
+                              <div class="retest-rate">
+                                <button class="rate-btn rate-nailed" @click="rateRetest('nailed')">Nailed it</button>
+                                <button class="rate-btn rate-partial" @click="rateRetest('partial')">Partial</button>
+                                <button class="rate-btn rate-miss" @click="rateRetest('miss')">Miss</button>
+                              </div>
+                            </div>
+                          </template>
+                        </div>
+                      </template>
+                    </div>
+                  </template>
+                </div>
+              </div>
+            </template>
+          </div>
+        </template>
+
+        <!-- Section study view -->
+        <template x-if="view === 'section' && currentSection">
+          <div class="section-view">
+            <!-- Section banner -->
+            <div class="section-banner">
+              <div class="section-banner-eyebrow" x-text="currentSection.eyebrow"></div>
+              <h1 class="section-banner-title" x-text="currentSection.title"></h1>
+              <div class="section-banner-meta">
+                <span class="meta-item">📖 <span x-text="currentSection.readTimeMin"></span> min read</span>
+                <span class="meta-item">🎯 <span x-text="currentSection.interviewerSignal"></span></span>
+              </div>
+              <div class="section-banner-accent"></div>
+            </div>
+
+            <!-- ═══════════════════════════════════════════════════ -->
+            <!-- Chunked walkthrough view (SQ3R loop per chunk)       -->
+            <!-- ═══════════════════════════════════════════════════ -->
+            <template x-if="isChunkedSection()">
+              <div class="chunked-view">
+
+                <!-- Chunk progress bar + stepper pills -->
+                <div class="chunk-stepper">
+                  <div class="chunk-stepper-meta">
+                    <span class="chunk-stepper-label">Your path through this walkthrough</span>
+                    <span class="chunk-stepper-progress" x-text="chunkProgressPct() + '% complete'"></span>
+                  </div>
+                  <div class="chunk-stepper-pills">
+                    <template x-for="(chunk, ci) in currentSection.chunks" :key="chunk.id">
+                      <button
+                        class="chunk-pill"
+                        :class="{
+                          active: ci === currentChunkIdx,
+                          complete: isChunkComplete(chunk.id)
+                        }"
+                        @click="goToChunk(ci, { stage: 'question' })">
+                        <span class="chunk-pill-num" x-text="isChunkComplete(chunk.id) ? '✓' : (ci + 1)"></span>
+                        <span class="chunk-pill-label" x-text="chunk.label"></span>
+                      </button>
+                    </template>
+                  </div>
+                </div>
+
+                <!-- Stage 1: Preview + Prior-knowledge question -->
+                <div class="chunk-stage stage-question" x-show="chunkStage === 'question'">
+                  <div class="stage-eyebrow">📋 STAGE 1 · PREVIEW</div>
+                  <div class="stage-chunk-header">
+                    <h2 class="stage-chunk-title" x-text="currentChunkMeta() ? currentChunkMeta().label : ''"></h2>
+                    <span class="stage-chunk-pos">
+                      Chunk <span x-text="currentChunkIdx + 1"></span> of <span x-text="currentSection.chunks.length"></span>
+                      · ~<span x-text="currentChunkMeta() ? currentChunkMeta().readTimeMin : 3"></span> min
+                    </span>
+                  </div>
+                  <template x-if="currentChunkContent() && currentChunkContent().preview">
+                    <p class="stage-preview-body" x-text="currentChunkContent().preview"></p>
+                  </template>
+
+                  <div class="prior-question-block">
+                    <div class="prior-label">
+                      <span class="prior-icon">❓</span>
+                      <span>BEFORE YOU READ · commit to a guess</span>
+                    </div>
+                    <p class="prior-q" x-text="currentChunkContent() && currentChunkContent().priorQuestion ? currentChunkContent().priorQuestion : 'Before reading: what do you already know about this topic?'"></p>
+                    <textarea
+                      class="prior-textarea"
+                      x-model="priorAnswer"
+                      placeholder="No grading. Just commit to an answer — the act of guessing deepens encoding."></textarea>
+                    <p class="prior-hint">You won't be graded. Research (generation effect) shows committing to a hypothesis before reading deepens learning by ~30%.</p>
+                  </div>
+
+                  <div class="stage-actions">
+                    <button class="prev-chunk-btn" @click="prevChunk()" :disabled="currentChunkIdx === 0">← Previous chunk</button>
+                    <button class="stage-next-btn" @click="advanceStage()">Continue to reading →</button>
+                  </div>
+                </div>
+
+                <!-- Stage 2: Read -->
+                <div class="chunk-stage stage-reading" x-show="chunkStage === 'reading'">
+                  <div class="stage-eyebrow">📖 STAGE 2 · READ</div>
+                  <div class="stage-chunk-header">
+                    <h2 class="stage-chunk-title" x-text="currentChunkMeta() ? currentChunkMeta().label : ''"></h2>
+                    <span class="stage-chunk-pos">
+                      Chunk <span x-text="currentChunkIdx + 1"></span> of <span x-text="currentSection.chunks.length"></span>
+                    </span>
+                  </div>
+                  <article class="reading chunk-reading" x-html="currentChunkHTML"></article>
+                  <div class="stage-actions">
+                    <button class="stage-back-btn" @click="chunkStage = 'question'">← Back to preview</button>
+                    <button class="stage-next-btn" @click="advanceStage()">
+                      <span x-show="currentChunkReciteItems().length > 0">Continue to recall →</span>
+                      <span x-show="currentChunkReciteItems().length === 0">Mark chunk complete →</span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Stage 3: Recite (Feynman) -->
+                <div class="chunk-stage stage-recite" x-show="chunkStage === 'recite'">
+                  <div class="stage-eyebrow">✎ STAGE 3 · IN YOUR OWN WORDS</div>
+                  <template x-if="currentChunkReciteItems().length > 0 && chunkReciteIdx < currentChunkReciteItems().length">
+                    <div class="recite-card">
+                      <div class="recite-progress">
+                        Prompt <span x-text="chunkReciteIdx + 1"></span> of <span x-text="currentChunkReciteItems().length"></span>
+                      </div>
+                      <p class="recite-q" x-text="currentChunkReciteItems()[chunkReciteIdx].q"></p>
+                      <textarea
+                        class="recall-textarea"
+                        x-model="chunkReciteAnswer"
+                        placeholder="Explain it like you would to a smart teammate. Don't look back."
+                        :disabled="chunkReciteRevealed"></textarea>
+                      <template x-if="!chunkReciteRevealed">
+                        <button class="reveal-btn" @click="revealChunkRecite()">Reveal Model Answer</button>
+                      </template>
+                      <template x-if="chunkReciteRevealed">
+                        <div class="recall-reveal">
+                          <div class="reveal-split">
+                            <div class="reveal-col">
+                              <div class="reveal-label">YOU WROTE</div>
+                              <div class="reveal-body your" x-text="chunkReciteAnswer || '(empty)'"></div>
+                            </div>
+                            <div class="reveal-col">
+                              <div class="reveal-label">MODEL ANSWER</div>
+                              <div class="reveal-body model" x-text="currentChunkReciteItems()[chunkReciteIdx].model"></div>
+                            </div>
+                          </div>
+                          <template x-if="currentChunkReciteItems()[chunkReciteIdx].keyPoints && currentChunkReciteItems()[chunkReciteIdx].keyPoints.length > 0">
+                            <div class="key-points">
+                              <div class="key-points-label">Key points to hit</div>
+                              <ul>
+                                <template x-for="kp in currentChunkReciteItems()[chunkReciteIdx].keyPoints">
+                                  <li x-text="kp"></li>
+                                </template>
+                              </ul>
+                            </div>
+                          </template>
+                          <div class="rate-row">
+                            <button class="rate-btn rate-nailed" @click="rateChunkRecite('nailed')">Nailed it</button>
+                            <button class="rate-btn rate-partial" @click="rateChunkRecite('partial')">Partial</button>
+                            <button class="rate-btn rate-miss" @click="rateChunkRecite('miss')">Miss</button>
+                          </div>
+                        </div>
+                      </template>
+                    </div>
+                  </template>
+                </div>
+
+                <!-- Stage 4: Walkthrough complete -->
+                <div class="chunk-stage stage-complete" x-show="chunkStage === 'complete'">
+                  <div class="complete-card">
+                    <div class="complete-emoji">🏁</div>
+                    <h2 class="complete-title">Walkthrough complete</h2>
+                    <p class="complete-sub">You've stepped through all <span x-text="currentSection.chunks.length"></span> chunks. Time to pressure-test it end to end.</p>
+                    <div class="complete-actions">
+                      <button class="stage-next-btn" @click="document.querySelector('.test-region').scrollIntoView({ behavior: 'smooth' })">
+                        Start consolidation test ↓
+                      </button>
+                      <button class="stage-back-btn" @click="goToChunk(0, { stage: 'question' })">↻ Restart walkthrough</button>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </template>
+
+            <!-- ═══════════════════════════════════════════════════ -->
+            <!-- Linear (non-chunked) reading for framework sections   -->
+            <!-- ═══════════════════════════════════════════════════ -->
+            <template x-if="!isChunkedSection()">
+              <div>
+                <article class="reading" x-html="currentSectionHTML"></article>
+                <div class="reading-end-divider">
+                  <span>End of reading</span>
+                </div>
+              </div>
+            </template>
+
+            <!-- Test region (gated for walkthroughs until all chunks done, hidden if no test content) -->
+            <template x-if="showTestRegion()">
+            <section class="test-region">
+              <div class="test-header">
+                <h2>🎯 Test Yourself</h2>
+                <p class="test-sub">Active recall &gt; re-reading. Missed items go to your review queue.</p>
+              </div>
+
+              <div class="test-tabs">
+                <button
+                  :class="{ active: currentTab === 'quiz' }"
+                  @click="currentTab = 'quiz'; resetTestState()"
+                  x-show="hasContent('mcq')">
+                  <span class="tab-icon">✓</span> Quiz
+                  <span class="tab-count" x-text="contentCount('mcq')"></span>
+                </button>
+                <button
+                  :class="{ active: currentTab === 'recall' }"
+                  @click="currentTab = 'recall'; resetTestState()"
+                  x-show="hasContent('recall')">
+                  <span class="tab-icon">✎</span> Recall
+                  <span class="tab-count" x-text="contentCount('recall')"></span>
+                </button>
+                <button
+                  :class="{ active: currentTab === 'scenarios' }"
+                  @click="currentTab = 'scenarios'; resetTestState()"
+                  x-show="hasContent('scenarios')">
+                  <span class="tab-icon">⚡</span> Scenarios
+                  <span class="tab-count" x-text="contentCount('scenarios')"></span>
+                </button>
+                <button
+                  :class="{ active: currentTab === 'drill' }"
+                  @click="currentTab = 'drill'; resetTestState()"
+                  x-show="hasContent('drill')">
+                  <span class="tab-icon">⏱</span> Drill
+                  <span class="tab-badge">Full mock</span>
+                </button>
+              </div>
+
+              <!-- Quiz panel -->
+              <div class="test-panel" x-show="currentTab === 'quiz' && hasContent('mcq')">
+                <template x-if="quizItems().length > 0 && quizIdx < quizItems().length">
+                  <div class="quiz-card">
+                    <div class="quiz-progress">
+                      Question <span x-text="quizIdx + 1"></span> of <span x-text="quizItems().length"></span>
+                      <span class="quiz-score">Score: <span x-text="quizScore"></span></span>
+                    </div>
+                    <div class="quiz-question" x-text="quizItems()[quizIdx].q"></div>
+                    <div class="quiz-options">
+                      <template x-for="(opt, oi) in quizItems()[quizIdx].options" :key="oi">
+                        <button
+                          class="quiz-option"
+                          :class="quizAnswered ? (oi === quizItems()[quizIdx].correct ? 'correct' : (oi === quizPick ? 'wrong' : 'dim')) : ''"
+                          :disabled="quizAnswered"
+                          @click="answerQuiz(oi)">
+                          <span class="opt-letter" x-text="String.fromCharCode(65 + oi)"></span>
+                          <span x-text="opt"></span>
+                        </button>
+                      </template>
+                    </div>
+                    <template x-if="quizAnswered">
+                      <div class="quiz-explanation">
+                        <div class="explanation-label">
+                          <span x-show="quizPick === quizItems()[quizIdx].correct">✓ Correct</span>
+                          <span x-show="quizPick !== quizItems()[quizIdx].correct">✗ Incorrect</span>
+                        </div>
+                        <div class="explanation-body" x-text="quizItems()[quizIdx].explanation"></div>
+                        <button class="next-btn" @click="nextQuiz()">
+                          <span x-show="quizIdx < quizItems().length - 1">Next question →</span>
+                          <span x-show="quizIdx === quizItems().length - 1">Finish quiz</span>
+                        </button>
+                      </div>
+                    </template>
+                  </div>
+                </template>
+                <template x-if="quizItems().length > 0 && quizIdx >= quizItems().length">
+                  <div class="quiz-finish">
+                    <div class="finish-emoji" x-text="quizScore / quizItems().length >= 0.8 ? '🎯' : '💪'"></div>
+                    <h3>Quiz complete</h3>
+                    <div class="finish-score"><span x-text="quizScore"></span> / <span x-text="quizItems().length"></span></div>
+                    <button class="next-btn" @click="resetQuiz()">Retake</button>
+                  </div>
+                </template>
+              </div>
+
+              <!-- Recall panel -->
+              <div class="test-panel" x-show="currentTab === 'recall' && hasContent('recall')">
+                <template x-if="recallItems().length > 0 && recallIdx < recallItems().length">
+                  <div class="recall-card">
+                    <div class="recall-progress">
+                      Prompt <span x-text="recallIdx + 1"></span> of <span x-text="recallItems().length"></span>
+                    </div>
+                    <div class="recall-prompt" x-text="recallItems()[recallIdx].q"></div>
+                    <textarea
+                      class="recall-textarea"
+                      x-model="recallAnswer"
+                      placeholder="Type your answer out loud in your head first, then write the key points..."
+                      :disabled="recallRevealed"></textarea>
+                    <template x-if="!recallRevealed">
+                      <button class="reveal-btn" @click="revealRecall()">Reveal Model Answer</button>
+                    </template>
+                    <template x-if="recallRevealed">
+                      <div class="recall-reveal">
+                        <div class="reveal-split">
+                          <div class="reveal-col">
+                            <div class="reveal-label">YOU WROTE</div>
+                            <div class="reveal-body your" x-text="recallAnswer || '(empty)'"></div>
+                          </div>
+                          <div class="reveal-col">
+                            <div class="reveal-label">MODEL ANSWER</div>
+                            <div class="reveal-body model" x-text="recallItems()[recallIdx].model"></div>
+                          </div>
+                        </div>
+                        <template x-if="recallItems()[recallIdx].keyPoints && recallItems()[recallIdx].keyPoints.length > 0">
+                          <div class="key-points">
+                            <div class="key-points-label">Key points to hit</div>
+                            <ul>
+                              <template x-for="kp in recallItems()[recallIdx].keyPoints">
+                                <li x-text="kp"></li>
+                              </template>
+                            </ul>
+                          </div>
+                        </template>
+                        <div class="rate-row">
+                          <button class="rate-btn rate-nailed" @click="rateRecall('nailed')">Nailed it</button>
+                          <button class="rate-btn rate-partial" @click="rateRecall('partial')">Partial</button>
+                          <button class="rate-btn rate-miss" @click="rateRecall('miss')">Miss</button>
+                        </div>
+                      </div>
+                    </template>
+                  </div>
+                </template>
+                <template x-if="recallItems().length > 0 && recallIdx >= recallItems().length">
+                  <div class="quiz-finish">
+                    <div class="finish-emoji">✎</div>
+                    <h3>Recall complete</h3>
+                    <button class="next-btn" @click="resetRecall()">Redo</button>
+                  </div>
+                </template>
+              </div>
+
+              <!-- Scenarios panel -->
+              <div class="test-panel" x-show="currentTab === 'scenarios' && hasContent('scenarios')">
+                <template x-if="scenarioItems().length > 0 && scenarioIdx < scenarioItems().length">
+                  <div class="scenario-card">
+                    <div class="scenario-progress">
+                      Scenario <span x-text="scenarioIdx + 1"></span> of <span x-text="scenarioItems().length"></span>
+                    </div>
+                    <div class="scenario-badge">SITUATIONAL</div>
+                    <div class="scenario-prompt" x-text="scenarioItems()[scenarioIdx].q"></div>
+                    <textarea
+                      class="recall-textarea scenario-textarea"
+                      x-model="scenarioAnswer"
+                      placeholder="Walk through your response in 2-4 bullets..."
+                      :disabled="scenarioRevealed"></textarea>
+                    <template x-if="!scenarioRevealed">
+                      <button class="reveal-btn" @click="revealScenario()">Compare to Reference</button>
+                    </template>
+                    <template x-if="scenarioRevealed">
+                      <div class="recall-reveal">
+                        <div class="reveal-split">
+                          <div class="reveal-col">
+                            <div class="reveal-label">YOU WROTE</div>
+                            <div class="reveal-body your" x-text="scenarioAnswer || '(empty)'"></div>
+                          </div>
+                          <div class="reveal-col">
+                            <div class="reveal-label">REFERENCE</div>
+                            <div class="reveal-body model" x-text="scenarioItems()[scenarioIdx].model"></div>
+                          </div>
+                        </div>
+                        <template x-if="scenarioItems()[scenarioIdx].keyPoints && scenarioItems()[scenarioIdx].keyPoints.length > 0">
+                          <div class="key-points">
+                            <div class="key-points-label">Key points to hit</div>
+                            <ul>
+                              <template x-for="kp in scenarioItems()[scenarioIdx].keyPoints">
+                                <li x-text="kp"></li>
+                              </template>
+                            </ul>
+                          </div>
+                        </template>
+                        <div class="rate-row">
+                          <button class="rate-btn rate-nailed" @click="rateScenario('nailed')">Nailed it</button>
+                          <button class="rate-btn rate-partial" @click="rateScenario('partial')">Partial</button>
+                          <button class="rate-btn rate-miss" @click="rateScenario('miss')">Miss</button>
+                        </div>
+                      </div>
+                    </template>
+                  </div>
+                </template>
+                <template x-if="scenarioItems().length > 0 && scenarioIdx >= scenarioItems().length">
+                  <div class="quiz-finish">
+                    <div class="finish-emoji">⚡</div>
+                    <h3>Scenarios complete</h3>
+                    <button class="next-btn" @click="resetScenarios()">Redo</button>
+                  </div>
+                </template>
+              </div>
+
+              <!-- Drill panel -->
+              <div class="test-panel" x-show="currentTab === 'drill' && hasContent('drill')">
+                <div class="drill-card">
+                  <div class="drill-header">
+                    <div class="drill-badge">FULL 35-MIN MOCK</div>
+                    <div class="drill-timer">
+                      <button class="timer-btn" @click="toggleTimer()">
+                        <span x-show="!timerRunning">▶ Start</span>
+                        <span x-show="timerRunning">⏸ Pause</span>
+                      </button>
+                      <div class="timer-display" :class="{ 'timer-danger': timerSecs < 300 }" x-text="formatTimer(timerSecs)"></div>
+                      <button class="timer-reset" @click="resetTimer()" title="Reset timer">↺</button>
+                    </div>
+                  </div>
+                  <div class="drill-prompt" x-text="currentSection.drill ? currentSection.drill.prompt : ''"></div>
+                  <div class="drill-steps">
+                    <template x-for="(step, si) in frameworkSteps" :key="si">
+                      <div class="drill-step">
+                        <div class="drill-step-header">
+                          <span class="drill-step-num" x-text="si + 1"></span>
+                          <span class="drill-step-name" x-text="step.name"></span>
+                          <span class="drill-step-time" x-text="step.time"></span>
+                        </div>
+                        <textarea
+                          class="drill-step-textarea"
+                          x-model="drillNotes[si]"
+                          @input="persistDrill()"
+                          :placeholder="step.hint"></textarea>
+                      </div>
+                    </template>
+                  </div>
+                  <div class="drill-actions">
+                    <button class="reveal-btn drill-reveal-btn" @click="drillRevealed = !drillRevealed">
+                      <span x-show="!drillRevealed">📖 Reveal Reference Walkthrough</span>
+                      <span x-show="drillRevealed">▲ Hide Reference</span>
+                    </button>
+                  </div>
+                  <div class="drill-reference" x-show="drillRevealed" x-html="currentDrillReferenceHTML"></div>
+                </div>
+              </div>
+            </section>
+            </template>
+
+            <!-- Locked test-region hint for walkthroughs still mid-flow -->
+            <template x-if="showLockedHint()">
+              <div class="test-locked-hint">
+                <div class="test-locked-icon">🔒</div>
+                <div class="test-locked-text">
+                  <div class="test-locked-title">Consolidation test locked</div>
+                  <div class="test-locked-sub">
+                    Complete all <span x-text="currentSection.chunks.length"></span> chunks above to unlock the pooled MCQs, scenarios, and full 35-min drill.
+                    (<span x-text="completedChunkIds().length"></span>/<span x-text="currentSection.chunks.length"></span> done)
+                  </div>
+                </div>
+              </div>
+            </template>
+
+            <!-- Section footer -->
+            <div class="section-footer">
+              <button class="mark-studied-btn" @click="markStudied()">
+                <span x-show="state.sections[currentSection.id]?.status !== 'tested'">✓ Mark studied</span>
+                <span x-show="state.sections[currentSection.id]?.status === 'tested'">● Studied</span>
+              </button>
+              <button class="next-section-btn" @click="nextSection()" :disabled="!hasNextSection()">
+                Next section →
+              </button>
+            </div>
+          </div>
+        </template>
+
+      </main>
+    </div>
+  </div>
+
+  <!-- CDN scripts -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/11.1.1/marked.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-graphql.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+  <script src="study/content.js"></script>
+  <script src="study/app.js"></script>
+  <script defer src="https://unpkg.com/alpinejs@3.13.5/dist/cdn.min.js"></script>
+</body>
+</html>

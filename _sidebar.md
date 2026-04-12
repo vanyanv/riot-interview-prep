@@ -7,5 +7,6 @@
   - [Round 5 — Deep Tech](round-5-deep-tech.md)
 - **Resources**
   - [Frontend System Design Prep](frontend-system-design-prep.md)
+  - [🎯 FSD Study Mode](study.html ':ignore')
   - [LeetCode Problems](leetcode-problems.md)
   - [Crowd-Sourced Intel](crowd-sourced-intel.md)
