@@ -304,6 +304,14 @@ const SECTION_METADATA = [
 // ============================================================
 
 const HIGHLIGHT_TERMS = [
+  // Riot-specific interview intel (web-research additions)
+  { term: 'RiotGamesMinions/frontend_test', def: 'The only primary-source FE artifact from Riot Games — three take-home prompts (Image Rotator, Tabbed Content, Text Search) in vanilla JS with no third-party libs. Take-home, not onsite SD.' },
+  { term: 'cross-boundary text search', def: 'The subtle trap in Riot\'s text-search take-home — phrases can cross HTML element boundaries, so innerHTML.match is wrong. Walk DOM text nodes via TreeWalker instead.' },
+  { term: 'Draw.io', def: 'Riot\'s confirmed diagramming tool during virtual system design rounds on Google Meet. Have it open in a second tab before the call.' },
+  { term: 'tryriot.com', def: 'NOT Riot Games — an unrelated HR-software company whose frontend-interview-challenge gets conflated with Riot Games by AI summarizers. Do not prep this as Riot intel.' },
+  { term: 'deep tech round', def: 'Riot\'s system-design interview style: high-level discussion (no tidy diagrams required) of microservices, protocols, and OOP classes, with a live-debug scenario in the final ~15 minutes.' },
+  { term: 'live-debug scenario', def: 'Expected in the final ~15 min of Riot\'s deep tech round — prep one SAO-format frontend prod-bug story (hydration mismatch, CDN invalidation, listener leak, bundle regression, async race).' },
+
   // Security
   { term: 'HttpOnly Secure cookies', def: 'Cookies JavaScript can\'t read (HttpOnly) and that only travel over HTTPS (Secure) — prevents XSS token theft.' },
   { term: 'HttpOnly cookies', def: 'Cookies inaccessible to JavaScript — protects auth tokens from XSS attacks.' },

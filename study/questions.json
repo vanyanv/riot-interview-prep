@@ -4408,9 +4408,175 @@
       }
     },
     "interview-intel": {
-      "mcq": [],
-      "recall": [],
-      "scenarios": [],
+      "mcq": [
+        {
+          "q": "According to publicly reported Blind posts, what is the overall shape of a Riot Games SWE onsite (including Web roles)?",
+          "options": [
+            "3 hours, 2 coding rounds + 1 system design",
+            "5 hours virtual: 2 behavioral + 1 evaluated lunch + 1 coding/depth + 1 systems design",
+            "8 hours in-person: 4 coding rounds + 2 system design + 2 behavioral",
+            "2 hours total, just system design and behavioral"
+          ],
+          "correct": 1,
+          "explanation": "Multiple Blind sources describe a 5-hour virtual loop: two behavioral interviews, an evaluated (informal but graded) lunch, a coding/depth round (often a take-home review if a take-home was done), and one systems design round. Culture fit is weighted heavily across all of them."
+        },
+        {
+          "q": "Blind posts describe Riot's 'deep tech' round. What should you expect in the final ~15 minutes?",
+          "options": [
+            "A pure trivia quiz on your language of choice",
+            "A live-debugging scenario — 'how would you debug this production issue?'",
+            "Another behavioral question",
+            "A whiteboard algorithm challenge"
+          ],
+          "correct": 1,
+          "explanation": "Verbatim from Blind: 'in the last 15 minutes, there may be a question on how you would debug a live issue.' Come in with one frontend prod-bug story pre-loaded in SAO format: observable symptom → hypothesis → bisect → root cause → fix → prevention. Good categories: hydration mismatch, CDN cache invalidation, memory leak from listeners, bundle-size regression, race condition in state updates."
+        },
+        {
+          "q": "Riot's deep-tech system-design conversation has a specific 'shape' according to Blind candidates. Which framing matches?",
+          "options": [
+            "Tidy diagrams are required; no diagrams = fail",
+            "Memorize one canonical architecture and recite it",
+            "High-level discussion about microservices, protocols, classes — diagrams NOT required, depth of reasoning is",
+            "Pure algorithms and Big-O analysis"
+          ],
+          "correct": 2,
+          "explanation": "Verbatim Blind quote: 'system design question that may not be in-depth (no diagrams required), but rather a high-level discussion about what microservices might be needed, what microservices are, and what types of protocols would be used.' You may also be asked to sketch OOP classes mid-conversation. Translation: conversational depth > clean whiteboard."
+        },
+        {
+          "q": "Riot's public FE job descriptions and Prepfully question summaries point to one surprising expectation for FE candidates. Which is it?",
+          "options": [
+            "Full-system literacy — be ready to draw the backend first, then zoom into the client, even on an 'FE round'",
+            "Memorize React internals and fiber reconciler",
+            "Only discuss CSS and accessibility",
+            "Focus purely on component trees; never mention APIs or backend"
+          ],
+          "correct": 0,
+          "explanation": "Riot's Prepfully-reported SWE SD bank skews backend (rate limiter, Twitter-like feed, time-series pipeline, cloud monitoring, friend recommendation). On a Web role these can surface on a 'FE round,' so be ready to sketch backend first, then trace the FE client into it. The League Client FE JD literally says 'build outstanding system designs to serve millions of players reliably.'"
+        },
+        {
+          "q": "What diagramming tool does Riot reportedly use during virtual system design rounds?",
+          "options": [
+            "Miro",
+            "Excalidraw",
+            "Draw.io / Diagrams.net",
+            "Figma"
+          ],
+          "correct": 2,
+          "explanation": "Draw.io / Diagrams.net is the tool reported across multiple Blind threads, with Google Meet for video. Have it open in a second tab BEFORE the interview starts — no time wasted fumbling with URLs or accounts."
+        },
+        {
+          "q": "A search result labeled 'frontend-interview-challenge' comes up for 'Riot frontend challenge' and it's hosted at github.com/tryriot/... — is this from Riot Games?",
+          "options": [
+            "Yes, this is the official Riot Games take-home",
+            "No — 'tryriot.com' is an unrelated HR-software company; do NOT prep this as Riot Games intel",
+            "Yes, but only for senior roles",
+            "It's a third-party recreation of Riot's real prompt"
+          ],
+          "correct": 1,
+          "explanation": "Critical disambiguation: tryriot.com is an HR-software company. Its 'frontend-interview-challenge' (Vue 3 + Tailwind employees table matching a Figma spec) is NOT Riot Games. AI summarizers frequently conflate them. The real Riot Games FE take-home lives at github.com/RiotGamesMinions/frontend_test. Also unrelated: github.com/riot/riot is the Riot.js micro-UI library."
+        }
+      ],
+      "recall": [
+        {
+          "q": "What are the only publicly verifiable primary-source FE prompts from Riot Games, and what do they reveal about Riot's taste in 'good' FE code?",
+          "model": "Three take-home prompts live at github.com/RiotGamesMinions/frontend_test (verified real Riot Games org, still live): (1) Image Rotator — cycle Katarina skins every 3 seconds with correct title/description; bonus for animation between slides. (2) Tabbed Content — functional tabbed container where clicking a tab swaps content. (3) Text Search — count occurrences of a word or phrase, with the subtle trap that 'phrases may cross HTML element boundaries' so innerHTML.match is wrong. README bans third-party libraries and says 'shouldn't take longer than a few hours.' These are TAKE-HOMES, not onsite FE system design — but they're the only primary-source signal on what Riot considers a strong FE submission: vanilla-JS fluency, creativity/finesse, and catching subtle prompt constraints.",
+          "keyPoints": [
+            "Image Rotator, Tabbed Content, Text Search",
+            "github.com/RiotGamesMinions/frontend_test",
+            "take-home, NOT onsite FE system design",
+            "vanilla JS, no third-party libs",
+            "subtle-constraint trap in text search"
+          ]
+        },
+        {
+          "q": "Explain the 'cross-boundary text search' trap in the Riot take-home and why innerHTML.match is the wrong answer.",
+          "model": "The prompt: count occurrences of a word or phrase inside a DOM subtree, where 'words can be contained within multiple levels of HTML elements, and phrases may cross those HTML element boundaries.' The naive solution — read innerHTML as a string and regex-match — breaks because innerHTML embeds literal tag markup ('<span>', '<em>') in between the letters of a phrase, so 'Riot Games' spanning '<em>Riot</em> Games' won't match 'Riot Games' in the innerHTML string. The correct approach: walk the DOM text nodes (TreeWalker or recursive childNodes traversal), concatenate their textContent in document order into a flattened string, then search that. This is the level of 'catches the subtle constraint' detail Riot rewards.",
+          "keyPoints": [
+            "innerHTML includes literal tag markup",
+            "phrases broken by tags won't regex-match",
+            "walk DOM text nodes (TreeWalker or childNodes)",
+            "concatenate textContent in order, then search",
+            "this is the exact signal Riot grades on"
+          ]
+        },
+        {
+          "q": "Is github.com/tryriot/frontend-interview-challenge a Riot Games prompt? What's the risk if you prep it?",
+          "model": "NO. tryriot.com is an unrelated HR-software company. Its challenge (Vue 3 + Tailwind employees table with an active/deactivated filter matching a Figma Community spec) has nothing to do with Riot Games. The risk: AI search summarizers and Google results frequently conflate 'tryriot' with 'Riot Games' because of the name collision. If you prep as if it were Riot's, you waste time on the wrong framework (Vue 3 + Tailwind is NOT Riot's stack) and walk in with false expectations about the prompt shape. The real Riot Games FE take-home is at github.com/RiotGamesMinions/frontend_test. Also unrelated: github.com/riot/riot is the Riot.js micro-UI library.",
+          "keyPoints": [
+            "tryriot.com = HR software company, NOT Riot Games",
+            "AI summarizers conflate the names",
+            "Vue 3 + Tailwind is NOT Riot's stack",
+            "real Riot FE take-home: github.com/RiotGamesMinions/frontend_test",
+            "also unrelated: riot.js micro-UI library"
+          ]
+        },
+        {
+          "q": "What evaluation signals do Riot's public FE JDs and the RiotGamesMinions README point to — what are you actually being graded on?",
+          "model": "(1) Vanilla-JS fluency — the take-home explicitly bans third-party libraries, so expect 'how does React batch this' / 'what does this selector cost at 10k rows' rather than framework API trivia. (2) Creativity and finesse on open-ended prompts — the README says it explicitly. (3) Catching subtle prompt constraints — the text-search cross-boundary trap is the canonical example. (4) Full-system literacy on FE rounds — be ready to draw backend first, then zoom into client. (5) Scale framing for 'millions of players' (verbatim from the League Client FE JD). (6) Trade-off articulation out loud ('why X over Y'). (7) Cross-functional collaboration embedded in design discussion (designer wants X but API can't, how handle?). (8) Live-debug / observability story for the final ~15 min.",
+          "keyPoints": [
+            "vanilla-JS fluency (no framework trivia)",
+            "creativity on open-ended prompts",
+            "catching subtle constraints",
+            "full-system literacy (backend first)",
+            "scale framing for millions of players",
+            "trade-off articulation out loud",
+            "cross-functional collab in design discussion",
+            "live-debug story for final 15 min"
+          ]
+        },
+        {
+          "q": "Summarize the round-format intel from Blind for Riot's senior SWE Web onsite. What's the shape of the day and what should you prep for each piece?",
+          "model": "5 hours total, fully virtual post-COVID. Panel shape: (1) 2 behavioral interviews — culture is weighted heavily, prep STAR stories around player-focus, conflict, and collaborative wins. (2) 1 evaluated lunch — informal conversation but STILL a signal; treat it as a behavioral round with no notebook. (3) 1 coding + depth-of-engineering round — often a take-home review with follow-ups if a take-home was submitted. (4) 1 systems design round — either a lightning round with various tech questions OR a full FE system design. Tool: Draw.io / Diagrams.net on Google Meet, 1-on-1 or 2-on-1 panel. Have Draw.io open in a second tab before the call.",
+          "keyPoints": [
+            "5 hours virtual, not in-person",
+            "2 behavioral + lunch + coding/depth + SD",
+            "lunch is evaluated, not just social",
+            "coding round often = take-home review",
+            "SD may be lightning-round OR deep",
+            "Draw.io on Google Meet, open in advance"
+          ]
+        },
+        {
+          "q": "What backend-weighted prompts from Riot's Prepfully question bank should a Web candidate be ready to handle even on an 'FE system design' round?",
+          "model": "Prepfully summaries from Riot candidates surface these generic SWE prompts that aren't explicitly FE-tagged but show up in Web-role prep pages: (1) Develop a micro-posting service similar to Twitter. (2) Build a distributed system for time-series data. (3) Design a recommendation system for finding friends on social networks. (4) Design a platform for real-time cloud-infrastructure monitoring. (5) Design a rate limiter (the canonical Riot backend SD prompt, repeated across summaries). These are NOT confirmed as FE-round prompts, but they signal that Riot's SD bank skews backend. Your move: when you get an FE-ish prompt, sketch the backend pipeline first (queue, processor, hot store, fan-out gateway), then zoom into the client. Don't wait to be asked about the backend — narrate it voluntarily.",
+          "keyPoints": [
+            "Twitter-like microposting service",
+            "time-series distributed system",
+            "friend recommendation",
+            "real-time cloud monitoring",
+            "rate limiter (canonical)",
+            "not confirmed FE-tagged but signal backend skew",
+            "narrate backend first, then client"
+          ]
+        }
+      ],
+      "scenarios": [
+        {
+          "q": "Hard truth: you have zero verbatim Riot FE system design prompts — deep web research (Glassdoor, Blind, Reddit, LeetCode, Medium, GitHub, Prepfully) turned up nothing. The interview is tomorrow. What's your honest prep move?",
+          "model": "Stop hunting for 'real prompts' — they're not findable. Instead: (1) Use the 7 walkthroughs in this study site as the scaffolding (Login, Match Viewing, Dashboard, Pick'Em, Search, Settings, CMS) — they already cover the framework shapes Riot would test. (2) Mentally apply gaming framing on the fly: when Fernando says 'design a search,' narrate it as 'search for champions, pro players, or matches' — Riot domain context shows you've pictured their users. (3) Prep ONE frontend prod-bug story in SAO format for the last 15 min. (4) Have Draw.io open in a second tab before the call starts. (5) Be ready for backend-weighted prompts even on an FE round — if a backend smell appears, draw backend first, then zoom into client. (6) Rehearse the player-first reframe: every technical decision ends with 'which means for the player, X.' That's the cultural tell Riot grades on and it's free points.",
+          "keyPoints": [
+            "no real prompts exist — stop hunting",
+            "7 existing walkthroughs = framework coverage",
+            "add gaming framing on the fly",
+            "prod-bug story in SAO format",
+            "Draw.io open in advance",
+            "backend-first on backend-smelling prompts",
+            "player-first reframe is free points"
+          ]
+        },
+        {
+          "q": "Fernando asks: 'Tell me about a time you debugged a production frontend issue.' You have ~15 minutes. What's your structure and what story categories make strong picks?",
+          "model": "Structure (SAO format): (1) Situation — one sentence on the observable symptom, no jargon ('users on iOS Safari started seeing a blank screen after our Friday deploy'). (2) Hypothesis — what you initially suspected and why (framework, recent commits, error shape in telemetry). (3) Bisect — how you narrowed it (git bisect, feature-flag toggle, rollback test, reproducing in a clean env, reading the exact stack trace). (4) Root cause — the actual mechanism, named precisely, not 'some race condition.' (5) Fix — what you shipped and why that was the minimal correct change. (6) Prevention — the systemic follow-up (regression test, monitoring alert, lint rule, code-review checklist). Strong category picks: hydration mismatch (SSR-specific, shows framework depth), CDN cache invalidation (shows infra literacy), memory leak from uncleaned event listeners (shows lifecycle understanding), bundle-size regression from a transitive dep (shows build-chain awareness), race condition in async state updates (shows concurrency reasoning). Avoid: 'I Google'd it and found the answer on Stack Overflow' — that shows no diagnostic process.",
+          "keyPoints": [
+            "SAO format: Situation → Action → Outcome",
+            "symptom → hypothesis → bisect → root cause → fix → prevention",
+            "name mechanism precisely, not vague",
+            "strong categories: hydration, CDN cache, listener leaks, bundle regression, async race",
+            "prevention beat = systemic follow-up",
+            "avoid passive 'found it on SO' framing"
+          ]
+        }
+      ],
       "chunks": {
         "data-flow-narrative": {
           "preview": "How to turn 'we use fetch' into a five-layer narrative that proves you think about the full path from API to pixel.",
