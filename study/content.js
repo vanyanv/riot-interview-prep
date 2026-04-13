@@ -3,6 +3,55 @@
    ============================================================ */
 
 const SECTION_METADATA = [
+  // ---------- Foundations ----------
+  {
+    id: 'foundations-building-blocks',
+    group: 'Foundations',
+    navTitle: 'The 15 Building Blocks',
+    eyebrow: 'FOUNDATIONS · MENTAL MODEL',
+    title: 'The 15 Building Blocks of System Design',
+    sourceHeading: 'Building Blocks: The 15 Primitives',
+    sourceFile: 'study/foundations.md',
+    readTimeMin: 8,
+    interviewerSignal: 'You compose primitives instead of memorizing systems',
+    chunks: [
+      { id: 'compute-routing', label: 'Compute & Routing', sourceSubheading: 'Compute & Routing', readTimeMin: 3 },
+      { id: 'state', label: 'State', sourceSubheading: 'State', readTimeMin: 2 },
+      { id: 'async-realtime', label: 'Async & Real-time', sourceSubheading: 'Async & Real-time', readTimeMin: 3 },
+    ],
+  },
+  {
+    id: 'foundations-7-themes',
+    group: 'Foundations',
+    navTitle: 'The 7 Frontend Themes',
+    eyebrow: 'FOUNDATIONS · META-FRAMEWORK',
+    title: 'The 7 Themes of Frontend System Design',
+    sourceHeading: 'The 7 Themes of Frontend System Design',
+    sourceFile: 'study/foundations.md',
+    readTimeMin: 7,
+    interviewerSignal: 'You use a consistent lens across every frontend problem',
+    chunks: [
+      { id: 'structure-communication', label: 'Structure & Communication', sourceSubheading: 'Structure & Communication', readTimeMin: 3 },
+      { id: 'resilience', label: 'Resilience', sourceSubheading: 'Resilience', readTimeMin: 2 },
+      { id: 'realtime-scale', label: 'Real-time & Scale', sourceSubheading: 'Real-time & Scale', readTimeMin: 2 },
+    ],
+  },
+  {
+    id: 'foundations-statelessness',
+    group: 'Foundations',
+    navTitle: 'Statelessness & Decisions',
+    eyebrow: 'FOUNDATIONS · PRINCIPLE',
+    title: 'Statelessness & the Decision Dictionary',
+    sourceHeading: 'Statelessness & the Decision Dictionary',
+    sourceFile: 'study/foundations.md',
+    readTimeMin: 6,
+    interviewerSignal: 'You can start any system design answer in 30 seconds',
+    chunks: [
+      { id: 'statelessness-principle', label: 'The Statelessness Principle', sourceSubheading: 'The Statelessness Principle', readTimeMin: 3 },
+      { id: 'decision-dictionary', label: 'The Decision Dictionary', sourceSubheading: 'The Decision Dictionary', readTimeMin: 3 },
+    ],
+  },
+
   // ---------- Framework ----------
   {
     id: 'framework-step-1',

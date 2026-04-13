@@ -1,5 +1,545 @@
 {
   "sections": {
+    "foundations-building-blocks": {
+      "mcq": [
+        {
+          "q": "Fernando asks 'which block gives you sub-millisecond reads of hot data?' Which do you pick?",
+          "options": [
+            "Postgres",
+            "S3 / object storage",
+            "Redis",
+            "Elasticsearch"
+          ],
+          "correct": 2,
+          "explanation": "Redis is an in-memory store — microsecond reads, no disk seek. Postgres hits disk, S3 is for blobs, Elasticsearch is for search. Postgres is the filing cabinet; Redis is the sticky note on your monitor."
+        },
+        {
+          "q": "You need to store user avatars (image blobs). Where do they belong?",
+          "options": [
+            "Postgres as a BYTEA column",
+            "Redis as a base64 string",
+            "Object storage (S3/GCS/R2) with the URL in Postgres",
+            "In the client's localStorage"
+          ],
+          "correct": 2,
+          "explanation": "Never put blobs in a relational DB — they blow up row size, kill query performance, and waste expensive storage. Object storage is cheap, durable, and globally distributable. Keep the URL in Postgres, store the bytes in S3."
+        },
+        {
+          "q": "Which block's primary job is to DECOUPLE producers and consumers in time?",
+          "options": [
+            "Load balancer",
+            "Message queue",
+            "CDN",
+            "Search index"
+          ],
+          "correct": 1,
+          "explanation": "A message queue lets a producer drop a message and move on while a consumer picks it up later. That time-decoupling is what makes queues a shock absorber for traffic spikes and the right home for any work that doesn't need to block the user."
+        },
+        {
+          "q": "You want to broadcast a single 'match ended' event to 10,000 currently-connected spectators. Which combo?",
+          "options": [
+            "REST API with long-polling on every client",
+            "Postgres LISTEN/NOTIFY directly from the client",
+            "Pub/sub feeding a WebSocket gateway that fans out to clients",
+            "CDN edge cache invalidation"
+          ],
+          "correct": 2,
+          "explanation": "Pub/sub is one-to-many by design: one publish, every subscriber gets it. Paired with a WebSocket gateway that holds the persistent client connections, a single event reaches everyone in one shot. This is the canonical real-time fan-out pattern."
+        },
+        {
+          "q": "Which statement about CDNs is a dangerous anti-pattern?",
+          "options": [
+            "Serving static JS bundles from the edge",
+            "Caching a user's authenticated /me profile response on the shared CDN",
+            "Blocking bots at the edge with WAF rules",
+            "Caching public match results"
+          ],
+          "correct": 1,
+          "explanation": "Caching personalized responses on a shared CDN is how you leak user A's profile to user B. It's happened to real companies (Steam, Christmas 2015). Anything personalized must be Cache-Control: private, no-store. CDN is for public, same-for-everyone content."
+        },
+        {
+          "q": "Why run a rate limiter at the CDN edge instead of at the origin?",
+          "options": [
+            "Because origin rate limiters don't exist",
+            "Because edge limiting blocks attackers before they consume your origin's bandwidth and CPU",
+            "Because CDNs have faster CPUs",
+            "Because rate limiting requires a GPU"
+          ],
+          "correct": 1,
+          "explanation": "Origin rate limiting still costs you the inbound bandwidth and TCP overhead of receiving the attack. Edge limiting drops the request in the CDN's network before it ever touches your infrastructure. For login endpoints (the #1 attack target), this is non-negotiable at scale."
+        }
+      ],
+      "recall": [
+        {
+          "q": "Name as many of the 15 building blocks as you can from memory in 60 seconds.",
+          "model": "Client, CDN, Load balancer, Stateless API server, Database (Postgres), Cache (Redis), Object storage (S3), Message queue (Kafka/SQS), Pub/sub, WebSocket gateway, Search index (Elasticsearch), Auth service, Rate limiter, Monitoring (logs/metrics/traces), Background workers. Group them mentally: Compute & Routing (1-4), State (5-7), Async & Real-time (8-15).",
+          "keyPoints": [
+            "all 15 blocks",
+            "mental grouping",
+            "primitives not systems"
+          ]
+        },
+        {
+          "q": "Explain the Postgres vs Redis split in one sentence you could say to a junior engineer.",
+          "model": "Postgres is the durable, transactional source of truth — slower but authoritative, the thing that must survive everything. Redis is a fast ephemeral cache and ephemeral-state store — microsecond reads, wipeable, use it for sessions, counters, leaderboards, and hot query results. Rule of thumb: Postgres is the filing cabinet, Redis is the sticky note on your monitor.",
+          "keyPoints": [
+            "durable vs ephemeral",
+            "truth vs speed",
+            "filing cabinet / sticky note"
+          ]
+        },
+        {
+          "q": "When would you reach for a message queue instead of just making the API call directly?",
+          "model": "When the work doesn't need to block the user (emails, exports, thumbnail generation), when you need to decouple two services in time so a downstream outage doesn't cascade, or when you need to absorb traffic spikes without overwhelming the database. The queue buffers the spike; background workers drain it at a steady rate.",
+          "keyPoints": [
+            "async non-blocking work",
+            "time decoupling",
+            "shock absorber for spikes"
+          ]
+        }
+      ],
+      "scenarios": [
+        {
+          "q": "'Design a live esports leaderboard with millions of concurrent viewers.' Using only the building blocks, compose an architecture in 30 seconds.",
+          "model": "CDN for static assets and page shell. Stateless API servers behind a load balancer. Redis sorted set (ZADD/ZRANGE) for the live rankings — sub-millisecond reads. Message queue consuming match-end events from the game service. Pub/sub fanning those events to a WebSocket gateway. WebSocket gateway pushes real-time leaderboard diffs to connected clients. Postgres stores historic leaderboards and is the source of truth for audit. Background workers process match events into the ranking updates. Rate limiter and monitoring wrap the whole thing.",
+          "keyPoints": [
+            "CDN + LB + stateless API",
+            "Redis sorted set for hot ranking",
+            "queue + pub/sub + WS gateway for fan-out",
+            "Postgres for audit truth"
+          ]
+        }
+      ],
+      "chunks": {
+        "compute-routing": {
+          "preview": "The four blocks that take a user's request from their browser to a place where work can happen: client, CDN, load balancer, stateless API server.",
+          "priorQuestion": "Before reading: in one sentence each, what does a CDN do, what does a load balancer do, and why does it matter that API servers are stateless?",
+          "recite": [
+            {
+              "q": "Explain to a junior engineer WHY statelessness is the foundation of horizontal scaling.",
+              "model": "If servers remember state between requests, you must route the same user back to the same server (sticky sessions), which defeats load balancing and makes crashes fatal for in-flight sessions. Stateless means any server can handle any request, so you can run 2 or 200 behind a load balancer, add and remove capacity on the fly, and a crashed server just gets routed around. That's the entire foundation of modern horizontal scaling.",
+              "keyPoints": [
+                "any server any request",
+                "no sticky sessions",
+                "crash = route around",
+                "add/remove capacity freely"
+              ]
+            },
+            {
+              "q": "A teammate says 'just put everything on the CDN.' Where do they go wrong?",
+              "model": "CDN is for public, same-for-everyone content. Personalized responses (like /me or a user's feed) must never be cached on a shared edge — you will leak one user's data to another. Use Cache-Control: private, no-store on anything personalized. CDN is for static assets, public content, and stateless endpoints. Dynamic, authenticated, or personalized content goes to origin.",
+              "keyPoints": [
+                "public-only",
+                "never personalized",
+                "private no-store",
+                "data leak risk"
+              ]
+            }
+          ]
+        },
+        "state": {
+          "preview": "Three blocks where information actually lives: Postgres for durable truth, Redis for hot ephemeral state, S3 for blobs.",
+          "priorQuestion": "Before reading: you need to store a user's profile photo, their login session, and their email address. Which block does each belong to, and why?",
+          "recite": [
+            {
+              "q": "Justify the Postgres vs Redis split as a design decision, not just a memorized fact.",
+              "model": "Postgres is durable, transactional, and authoritative — it's the thing that must survive crashes, restarts, and disasters. It's also comparatively slow because it hits disk. Redis is in-memory, microsecond-fast, but designed to be wipeable. The split is: anything you must never lose lives in Postgres as the source of truth; anything you need fast and can afford to reconstruct lives in Redis as a cache, counter, session, or leaderboard. The two work together — Redis fronts Postgres for hot reads, Postgres backs up Redis for durability.",
+              "keyPoints": [
+                "durable vs ephemeral",
+                "disk vs memory",
+                "truth vs speed",
+                "they work together as layers"
+              ]
+            },
+            {
+              "q": "Why never store a user avatar image in Postgres as a BYTEA column?",
+              "model": "Binary blobs balloon row sizes, wreck query performance (every SELECT drags the blob along), kill replication throughput, and waste expensive DB storage on something that doesn't need transactions. Object storage (S3, GCS, R2) is purpose-built: cheap, durable, globally distributable via CDN, and designed for serving directly to clients. Store the URL in Postgres, store the bytes in S3.",
+              "keyPoints": [
+                "blobs bloat rows",
+                "S3 is purpose-built",
+                "serve via CDN",
+                "URL in Postgres, bytes in S3"
+              ]
+            }
+          ]
+        },
+        "async-realtime": {
+          "preview": "Eight blocks that handle everything beyond the synchronous request/response path: queues, pub/sub, WebSockets, search, auth, rate limiters, monitoring, and background workers.",
+          "priorQuestion": "Before reading: what's the difference between a message queue and pub/sub, and when would you pick one over the other?",
+          "recite": [
+            {
+              "q": "Queue vs pub/sub — explain the one-sentence difference and give an example of each.",
+              "model": "A message queue delivers each message to exactly ONE consumer — use it when you have work to distribute (send email, generate thumbnail, process upload). Pub/sub delivers each message to MANY subscribers — use it when you're broadcasting events (match ended, chat message posted, game state changed). Queues distribute work; pub/sub distributes events.",
+              "keyPoints": [
+                "queue = 1 consumer",
+                "pubsub = many subscribers",
+                "work vs events",
+                "examples for each"
+              ]
+            },
+            {
+              "q": "Why run a WebSocket gateway as a separate tier from your stateless API servers?",
+              "model": "WebSockets are inherently stateful — the server must remember which connection belongs to which user. Mixing stateful WebSocket handling into your stateless REST tier pollutes the entire tier with state, prevents horizontal scaling, and means a crash of the WS layer takes down REST too. A dedicated WS gateway keeps the API tier pure stateless, subscribes to pub/sub for events, and scales independently. Each tier fails independently and scales on its own traffic pattern.",
+              "keyPoints": [
+                "WS is stateful, REST is not",
+                "isolation prevents contagion",
+                "independent scaling",
+                "subscribe to pub/sub for events"
+              ]
+            },
+            {
+              "q": "A senior engineer says 'we don't need monitoring yet, we'll add it when we have users.' Push back in one paragraph.",
+              "model": "You can't fix what you can't see, and production bugs happen before users arrive — silent failures, slow endpoints, cold-start issues, misconfigured dependencies. Adding monitoring after the fact means flying blind through the riskiest window (launch) and then having to retroactively instrument code under stress. Day-one monitoring is cheap: structured logs, basic metrics (latency, error rate, throughput), error tracking (Sentry), and ideally tracing. The cost is low, the payoff is knowing immediately when something breaks.",
+              "keyPoints": [
+                "can't fix what you can't see",
+                "bugs before users",
+                "launch is the riskiest window",
+                "low cost day one"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "foundations-7-themes": {
+      "mcq": [
+        {
+          "q": "Which of the 7 themes covers React Query, server state vs client state, and the container/presentational split?",
+          "options": [
+            "Real-time strategies",
+            "Client structure",
+            "Frontend scaling",
+            "Failure handling"
+          ],
+          "correct": 1,
+          "explanation": "Theme 1 (Client structure) is about how the pieces nest and where state lives across its layers: server state (React Query/SWR), client/UI state (Zustand/Redux), URL state (router), and persistent state (localStorage/IndexedDB)."
+        },
+        {
+          "q": "A dashboard needs live score updates every 2 seconds. One-way from server to client. Pick the transport.",
+          "options": [
+            "WebSocket — most powerful option",
+            "Long polling — simplest legacy fallback",
+            "SSE (Server-Sent Events) — one-way, HTTP-native",
+            "Fetch with setInterval — use polling"
+          ],
+          "correct": 2,
+          "explanation": "SSE is the sweet spot for one-way server→client streams: simpler than WebSocket, survives HTTP proxies, auto-reconnects. WebSocket is overkill when you don't need client→server messaging. Polling wastes bandwidth for frequent updates."
+        },
+        {
+          "q": "Which of these is a NON-goal of Theme 4 (Auth, errors, retries, offline)?",
+          "options": [
+            "Handling the four render states (loading/error/empty/success)",
+            "Silent token refresh on 401",
+            "Maximizing bundle size",
+            "Offline-first with service worker"
+          ],
+          "correct": 2,
+          "explanation": "Theme 4 is about resilience — what happens when things go wrong. Bundle size is a concern for Theme 6 (Frontend scaling). The four render states, silent refresh, and offline strategies all live under Theme 4."
+        },
+        {
+          "q": "Your stats service is down but the match metadata service is up. What does good failure handling (Theme 7) look like?",
+          "options": [
+            "Show an error page until all services recover",
+            "Render the match page with metadata and show 'stats unavailable' for the broken panel",
+            "Retry the stats service in a tight loop until it recovers",
+            "Redirect the user to a maintenance page"
+          ],
+          "correct": 1,
+          "explanation": "Graceful degradation: each data source fails independently. One broken panel should never take down the whole page. Show what you have, mark what you don't, offer a retry. Isolation is the core principle of Theme 7."
+        },
+        {
+          "q": "Which theme would you invoke to argue for route-level code splitting with React.lazy()?",
+          "options": [
+            "Theme 3 — caching layers",
+            "Theme 5 — real-time strategies",
+            "Theme 6 — frontend scaling",
+            "Theme 2 — client/API communication"
+          ],
+          "correct": 2,
+          "explanation": "Frontend scaling is about respecting the worst device on the worst network. Code splitting, lazy loading, CDN-hosted assets, and image optimization all live here. The benchmark player is on 3G on a low-end phone in a remote region — not you on fiber."
+        }
+      ],
+      "recall": [
+        {
+          "q": "Name all 7 themes of frontend system design in order, with a one-line description for each.",
+          "model": "(1) Client structure — how components nest and where state lives. (2) Client↔API communication — REST/GraphQL/WS, optimistic updates. (3) Caching layers — memory, service worker, CDN, Redis, DB, each with TTLs and invalidation. (4) Auth, errors, retries, offline — the resilience story including 4 render states and silent refresh. (5) Real-time strategies — polling vs SSE vs WebSocket. (6) Frontend scaling — code splitting, lazy loading, CDN, image optimization. (7) Failure handling — graceful degradation, feature flags, isolation, circuit breakers.",
+          "keyPoints": [
+            "all 7 in order",
+            "one-line description each",
+            "consistent lens"
+          ]
+        },
+        {
+          "q": "Explain the transport hierarchy for real-time updates and when to pick each tier.",
+          "model": "Polling for infrequent updates (every 10+ seconds) — simplest, works everywhere. Long polling for legacy environments that can't do WS. SSE for one-way server→client streams (feeds, notifications, live stats) — simpler than WebSocket, HTTP-native, auto-reconnects. WebSocket only when you need full duplex (chat, multiplayer, collaborative editing). Move left to right as you actually need the capability — don't default to WebSocket just because it sounds powerful.",
+          "keyPoints": [
+            "4 options in order",
+            "pick cheapest that works",
+            "SSE as middle ground",
+            "WS for full duplex"
+          ]
+        },
+        {
+          "q": "How does the 'four render states' discipline change how you write a data-fetching component?",
+          "model": "Every data-dependent view becomes a switch over four explicit states: loading (skeleton), error (message + retry), empty (friendly CTA), success (content). No implicit spinners-forever on failure, no blank screens on empty, no 'white screen of death.' The user always sees something actionable. It forces you to design all the unhappy paths, not just the golden path — which is where production quality actually lives.",
+          "keyPoints": [
+            "four explicit states",
+            "always actionable",
+            "unhappy paths by design",
+            "production quality"
+          ]
+        }
+      ],
+      "scenarios": [
+        {
+          "q": "Fernando asks: 'Design the frontend for a live match-watching page during Worlds.' Name which of the 7 themes you'd spend the most time on and why.",
+          "model": "Themes 3, 4, 5, and 7 dominate this question. Theme 5 (real-time) because live scores and play-by-play need push updates — SSE for one-way stat streams, WebSocket only if chat is in scope. Theme 3 (caching) because static assets and completed match data should be at the edge while live state should never be cached. Theme 4 (resilience) because silent auth refresh matters on a long session and the four render states keep the page usable when the stats pipeline flakes. Theme 7 (failure handling) because during Worlds ANY service outage must degrade gracefully — show metadata when stats are down, not a crash. Themes 1, 2, and 6 matter but are table stakes; 3/4/5/7 are where the hard tradeoffs live.",
+          "keyPoints": [
+            "themes 3/4/5/7 dominate",
+            "real-time transport choice",
+            "caching split static vs live",
+            "graceful degradation during Worlds"
+          ]
+        }
+      ],
+      "chunks": {
+        "structure-communication": {
+          "preview": "Themes 1 and 2 — how the client is built (component tree, state layers) and how it talks to the API (REST/GraphQL/WS, optimistic updates).",
+          "priorQuestion": "Before reading: a Riot match page has 'current match', 'which tab is selected', 'match ID in URL', and 'favorite teams'. Which state layer does each belong to?",
+          "recite": [
+            {
+              "q": "Why split state into four layers (server, client/UI, URL, persistent)? What does picking the wrong layer cost you?",
+              "model": "Each layer has different invalidation rules, persistence semantics, and sharing scope. Server state (React Query) needs caching, deduplication, and staleness. Client state (Zustand) is ephemeral and component-scoped. URL state is shareable and bookmarkable — putting a filter selection here means users can share deep links. Persistent state (localStorage) survives reload. Picking wrong: storing URL-worthy state in React state means refresh loses it; storing server state in Redux means you reinvent caching; putting UI state in the URL pollutes the URL bar. Layer choice is an invariant, not an implementation detail.",
+              "keyPoints": [
+                "four layers four semantics",
+                "wrong layer costs you invariants",
+                "URL state = shareable",
+                "server state needs caching"
+              ]
+            },
+            {
+              "q": "Justify REST over GraphQL for a Riot match-stats page without saying 'REST is simpler.'",
+              "model": "The match page has a small number of well-known endpoints (match, standings, stats), every response is cacheable by URL, and the access patterns are known in advance. REST's URL-is-the-cache-key property buys us free CDN caching and HTTP-native caching headers. GraphQL would give client-side field flexibility we don't need and cost us caching simplicity — one endpoint, one POST per query, no free CDN cache. REST wins when the shape is stable and caching is the dominant concern.",
+              "keyPoints": [
+                "URL as cache key",
+                "stable shape = stable URL",
+                "CDN caches REST free",
+                "GraphQL costs caching"
+              ]
+            }
+          ]
+        },
+        "resilience": {
+          "preview": "Themes 3 and 4 — caching tiers (memory → SW → CDN → Redis → DB) and the resilience story (auth, errors, retries, offline).",
+          "priorQuestion": "Before reading: write the five caching layers in order from fastest to slowest, and give one thing that MUST NEVER be cached on a shared layer.",
+          "recite": [
+            {
+              "q": "Explain the 'four render states' discipline as a design principle, not a checklist.",
+              "model": "Every data-dependent view has four legitimate states: loading, error, empty, success. Spinner-then-data ignores error (spinner forever on failure) and empty (blank screen when there's no data). Treating each as a distinct render branch forces you to design all the unhappy paths up front — retry UX on errors, CTA on empty, skeleton on loading. The user never sees a white screen and never sees a frozen spinner. Production quality lives in the unhappy paths, not the golden path.",
+              "keyPoints": [
+                "four states by design",
+                "no spinner-forever bugs",
+                "unhappy paths first-class",
+                "production quality in the edges"
+              ]
+            },
+            {
+              "q": "Walk through the silent refresh flow for an expired access token, and say what the user actually sees.",
+              "model": "Client calls an API. Server returns 401. Fetch interceptor catches the 401, calls /auth/refresh. If refresh succeeds, interceptor gets a new access token and retries the ORIGINAL request. Response comes back as if nothing happened. The user sees zero interruption — no flicker, no redirect, no lost form data. If refresh itself fails, THEN redirect to login. A shared in-flight promise ensures 10 concurrent 401s don't cause 10 parallel refresh calls — they all await the same refresh.",
+              "keyPoints": [
+                "interceptor at HTTP layer",
+                "retry original request",
+                "user sees nothing",
+                "dedupe concurrent refreshes"
+              ]
+            }
+          ]
+        },
+        "realtime-scale": {
+          "preview": "Themes 5, 6, 7 — real-time strategies (polling/SSE/WS), frontend scaling (code splitting, CDN, images), and failure handling (graceful degradation, isolation).",
+          "priorQuestion": "Before reading: name one tool from each of Themes 5, 6, and 7 that you'd use on a live match page during Worlds.",
+          "recite": [
+            {
+              "q": "How does graceful degradation differ from just showing an error page?",
+              "model": "An error page is binary — something broke, nothing works. Graceful degradation means one broken service takes down ONLY its part of the page. If the stats service fails, the match metadata still renders, the chat still works, the scoreboard still updates — only the stats panel shows 'unavailable, retry.' Each data source has its own loading/error/empty state, isolated from the others. The page keeps its shape; one panel admits defeat. That's the difference between 'the site is down' and 'one feature is degraded.'",
+              "keyPoints": [
+                "isolation by data source",
+                "one panel fails not the page",
+                "page keeps its shape",
+                "'degraded' not 'down'"
+              ]
+            },
+            {
+              "q": "You're on a low-end Android phone on 3G in Jakarta. Which Theme 6 tools matter most, and why does it matter to Riot specifically?",
+              "model": "Code splitting (don't download the whole app to see one page), image optimization (AVIF/WebP with responsive srcset — images dominate bundle weight), CDN (edge in Jakarta means 50ms not 500ms), and bundle analysis (delete unused deps). It matters to Riot because their player base is GLOBAL — League players in Southeast Asia, Brazil, and Eastern Europe are not on MacBook Pros on fiber. The benchmark player is on a budget Android on a congested 3G network, and every kilobyte of wasted bundle is a player who closes the tab.",
+              "keyPoints": [
+                "code split + images + CDN + bundle",
+                "Riot is global",
+                "benchmark is low-end 3G",
+                "wasted KB = lost player"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "foundations-statelessness": {
+      "mcq": [
+        {
+          "q": "A teammate says 'stateless servers have no state at all.' What's the correction?",
+          "options": [
+            "Correct as stated",
+            "Stateless means the server PROCESS holds no state between requests — the system still has state, it just lives in DB/Redis/client, not in server RAM",
+            "Stateless means no database",
+            "Stateless means you can't use cookies"
+          ],
+          "correct": 1,
+          "explanation": "The common misconception. 'Stateless' refers to the server process being amnesiac between requests — state still exists, it just lives in durable/shared layers (Postgres, Redis, client JWT) instead of in a specific server's RAM. That's what enables horizontal scaling."
+        },
+        {
+          "q": "Which of these is the PRIMARY benefit that statelessness unlocks?",
+          "options": [
+            "Smaller bundle sizes",
+            "Horizontal scaling — any server can handle any request, so you can add/remove capacity freely",
+            "Faster per-request response times",
+            "Zero database queries"
+          ],
+          "correct": 1,
+          "explanation": "Horizontal scaling is THE unlock. Without statelessness you need sticky sessions, which defeat load balancing, make crashes fatal, and complicate deploys. Statelessness is the foundation — everything else (fault tolerance, easy deploys, cache-friendliness) follows from it."
+        },
+        {
+          "q": "Using the Decision Dictionary: you need to INSTANTLY revoke a compromised session. Which block?",
+          "options": [
+            "JWT alone",
+            "A CDN cache invalidation",
+            "Server-side session in Redis (or a JWT blocklist keyed by jti)",
+            "Postgres row-level security"
+          ],
+          "correct": 2,
+          "explanation": "Pure JWTs cannot be revoked before expiry — you'd have to rotate the signing key, which logs out everyone. Server-side sessions in Redis can be deleted instantly. A common hybrid: short JWT for the hot path, a Redis blocklist of revoked jti's for emergencies."
+        },
+        {
+          "q": "Which pairing is WRONG in the Decision Dictionary?",
+          "options": [
+            "Need real-time two-way → WebSocket gateway",
+            "Need fast global static delivery → CDN",
+            "Need to store user avatars → Postgres BYTEA column",
+            "Need to absorb a traffic spike → Message queue"
+          ],
+          "correct": 2,
+          "explanation": "User avatars (and any blob) belong in object storage (S3/GCS/R2), never in a relational DB. The other three pairings are canonical: WebSockets for two-way real-time, CDN for fast global static, queue for spike absorption."
+        },
+        {
+          "q": "WebSockets are inherently stateful. How do you keep your API tier stateless while still offering real-time?",
+          "options": [
+            "Give up on statelessness for the whole backend",
+            "Run a dedicated WebSocket gateway as a separate tier, subscribed to pub/sub for events",
+            "Use long polling only",
+            "Store each connection in Postgres"
+          ],
+          "correct": 1,
+          "explanation": "Isolate the stateful concern. A dedicated WebSocket gateway holds the persistent connections and subscribes to a pub/sub topic for events. The API tier stays pure stateless and talks to the gateway indirectly by publishing events. Each tier fails and scales independently."
+        }
+      ],
+      "recall": [
+        {
+          "q": "Define 'stateless' in one sentence that a PM would understand, and explain why it matters for scaling.",
+          "model": "Stateless means each request to the server carries everything the server needs to handle it, so the server doesn't have to remember anything about previous requests from that user. It matters because it lets us run many identical servers behind a load balancer — any server can handle any request, we can add or remove servers instantly based on load, and if one crashes the rest keep serving without losing anyone's session.",
+          "keyPoints": [
+            "request is self-contained",
+            "server doesn't remember",
+            "any server any request",
+            "crash-safe and elastic"
+          ]
+        },
+        {
+          "q": "Use the Decision Dictionary to design a response to 'Design a notification system.' Name the blocks you'd reach for, in order.",
+          "model": "Stateless API + load balancer (accept writes), Postgres (durable store of notifications), message queue (async fan-out work), background workers (process notification jobs), pub/sub (broadcast to online users), WebSocket gateway (push to connected clients), Redis (unread counts, rate limiting), CDN (serve notification UI assets), monitoring (track delivery). Each block answers a specific need: durability → Postgres, async work → queue, broadcast → pub/sub, delivery → WS gateway.",
+          "keyPoints": [
+            "each need maps to a block",
+            "queue + pubsub + WS for delivery",
+            "Postgres for durability",
+            "Redis for counters"
+          ]
+        },
+        {
+          "q": "When would you pick a pure-JWT auth flow (no Redis) vs a JWT + Redis hybrid?",
+          "model": "Pure JWT works for service-to-service auth inside trusted infrastructure, stateless edge functions, public read APIs with short tokens, and small apps where the operational simplicity of 'no Redis dependency' outweighs the downsides. JWT + Redis is the right call when you need instant revocation (security-sensitive apps), when permissions change frequently, when you need refresh token rotation with theft detection, when you need rate limiting or session analytics, or when you need 'log out from all devices.' Most production consumer apps use the hybrid.",
+          "keyPoints": [
+            "pure JWT for trusted edge/microservice",
+            "hybrid for revocation/rotation",
+            "security needs drive hybrid",
+            "consumer apps default to hybrid"
+          ]
+        }
+      ],
+      "scenarios": [
+        {
+          "q": "Fernando says: 'You have 30 seconds. Design a leaderboard for a live tournament with 5M concurrent viewers.' Walk him through using the Decision Dictionary out loud.",
+          "model": "Scanning the dictionary: 5M concurrent → stateless API + load balancer + CDN. Live rankings that update constantly → Redis sorted set (ZADD/ZRANGE, microsecond reads). Updates triggered by match events → message queue consuming from the game service, background workers writing to Redis. Fan-out to every connected viewer → pub/sub feeding a WebSocket gateway. Historic leaderboards and audit → Postgres as source of truth. Static UI and page shell → CDN at the edge. Rate limiter on public endpoints at the edge to block abuse. Monitoring everywhere. That's 7 of the 15 blocks, composed in 30 seconds, each justified by a specific need from the dictionary.",
+          "keyPoints": [
+            "composed from dictionary",
+            "each block justified",
+            "Redis sorted set is the hot read path",
+            "queue+pubsub+WS for fan-out"
+          ]
+        }
+      ],
+      "chunks": {
+        "statelessness-principle": {
+          "preview": "Why statelessness is the principle that ties every other building block together — and what 'stateless' actually means (hint: it doesn't mean no state).",
+          "priorQuestion": "Before reading: a PM asks you 'what does it mean for a server to be stateless?' Write your one-sentence answer.",
+          "recite": [
+            {
+              "q": "Correct this statement: 'If a server is stateless, it means the system has no state.'",
+              "model": "Stateless refers to the server PROCESS holding no memory between requests — not the system as a whole. State absolutely exists: the database holds durable state, Redis holds hot ephemeral state, the client holds UI state and auth tokens. What's stateless is the API server in the middle. The state has been PUSHED to shared or durable layers (DB, cache, client) so that any server in the fleet can handle any request without 'knowing' anything. That's the entire unlock — it decouples request handling from where state lives.",
+              "keyPoints": [
+                "process not system",
+                "state pushed to shared layers",
+                "API server stays amnesiac",
+                "decouples handling from storage"
+              ]
+            },
+            {
+              "q": "Name the five things statelessness buys you, and explain which is the 'killer feature.'",
+              "model": "(1) Horizontal scaling — any server any request. (2) Fault tolerance — crashed server just gets routed around. (3) Simpler debugging — each request reasoned about in isolation. (4) Cache-friendliness — same request, same response, so CDNs and HTTP caches work. (5) Easier deploys — no session draining dance. The killer feature is horizontal scaling: it's the prerequisite for everything else. Without it, adding capacity means sticky sessions or rebalancing, crashes lose data, deploys are painful, caching is harder. Horizontal scaling is the root and the other four are branches.",
+              "keyPoints": [
+                "5 benefits",
+                "horizontal scaling is root",
+                "others follow from it",
+                "modern arch impossible without it"
+              ]
+            }
+          ]
+        },
+        "decision-dictionary": {
+          "preview": "The 'what does this feature need → which block' lookup that lets you START any system design answer in 30 seconds instead of freezing.",
+          "priorQuestion": "Before reading: write down the block you'd reach for if a feature needs (a) instant session revocation, (b) real-time two-way updates, (c) absorbing a traffic spike, (d) full-text search. One block each.",
+          "recite": [
+            {
+              "q": "Explain how the Decision Dictionary changes how you APPROACH a system design question, not just answer it.",
+              "model": "Without the dictionary, you're trying to recall memorized architectures ('how was Twitter built?') and reverse-engineer them onto the question — slow and error-prone. With the dictionary, you shred the question into requirements ('real-time? durable? global? auth-sensitive? spike-prone?') and look each up. Each requirement maps to 1-2 blocks, and the architecture emerges from the composition. You're doing SELECTION, not RECALL. That's what lets a fresh answer come out in 30 seconds instead of 5 minutes of nervous whiteboarding.",
+              "keyPoints": [
+                "selection not recall",
+                "requirements → blocks",
+                "composition not memorization",
+                "start in 30 seconds"
+              ]
+            },
+            {
+              "q": "Use the dictionary to answer 'why can't I just cache /me on the CDN?' in a way that shows you understand the tradeoff.",
+              "model": "The dictionary says CDN is for 'fast global static delivery' of PUBLIC content. /me is personalized per user — caching it on a shared CDN means user A's profile gets served to user B when their URL happens to hit the same cache key. That's a data leak, not a performance win. The right answer for personalized auth-gated content is either (a) don't cache at all and hit origin, or (b) use edge auth: verify the JWT at the edge worker, then serve per-user cached content with the user ID mixed into the cache key. CDN is a tool, not a magic box — you need to understand what it's for.",
+              "keyPoints": [
+                "CDN = public content only",
+                "personalized = data leak",
+                "edge auth as the pro move",
+                "cache key must include user"
+              ]
+            }
+          ]
+        }
+      }
+    },
     "framework-step-1": {
       "mcq": [
         {
