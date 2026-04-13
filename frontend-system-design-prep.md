@@ -152,44 +152,52 @@ URL ←→ Router ←→ Components ←→ React Query Cache ←→ API
 
 ### Step 5: API Contract (3-5 minutes)
 
-Define the interface between frontend and backend. Don't design the backend — design what the frontend needs.
+Define the interface between frontend and backend. Don't design the backend — design what the frontend needs. Show you can work in **both REST and GraphQL** and justify the pick from the domain, not from habit.
 
-**Say:** *"Let me define the API contract from the frontend's perspective — what data do we need, and in what shape?"*
+**Say:** *"Let me define the API contract from the frontend's perspective — what data do we need, and in what shape? I'll show it in both styles and pick one based on the constraints."*
 
-**For REST:**
-```
+#### REST shape
+```bash
 GET    /api/matches?status=live&page=1&limit=20
 GET    /api/matches/:id
-POST   /api/auth/login   { email, password }
-POST   /api/predictions   { matchId, teamId }
+POST   /api/auth/login         { email, password }
+POST   /api/predictions        { matchId, teamId }
+PATCH  /api/predictions/:id    { teamId }
 ```
 
-**For GraphQL (Fernando's preference):**
+#### GraphQL shape
 ```graphql
 query GetMatch($id: ID!) {
   match(id: $id) {
-    id
-    status
+    id, status
     teams { name, logo }
     score { team1, team2 }
-    games { ... }
+    games { id, winner, duration }
   }
 }
 
 subscription OnMatchUpdate($matchId: ID!) {
   matchUpdated(matchId: $matchId) {
-    score
-    status
+    score, status
     liveStats { goldDiff, kills }
   }
 }
+
+mutation SubmitPrediction($matchId: ID!, $teamId: ID!) {
+  submitPrediction(matchId: $matchId, teamId: $teamId) { matchId, lockedAt }
+}
 ```
 
-**Things to mention:**
-- *"I'd lean toward GraphQL here because [multiple clients need different data shapes / the data is deeply nested / Fernando's team uses it]. But for simpler CRUD, REST with proper caching headers is fine."*
-- *"For real-time data, I'd use GraphQL subscriptions backed by WebSocket, with SSE as a fallback."*
-- Pagination: cursor-based for real-time lists (items shift), offset-based for static lists
-- Error responses: standardized shape `{ error: { code, message, field? } }`
+**Choosing between them — 3-bullet rubric you can quote from memory:**
+- **REST fits when:** flat CRUD, aggressive CDN/HTTP caching with `Cache-Control`, homogeneous clients, OAuth redirects, operations you want obvious in DevTools.
+- **GraphQL fits when:** deeply nested data, heterogeneous clients pulling different shapes from the same graph, subscriptions for real-time, per-view field selection, typed input objects for complex mutations.
+- **Either is fine when:** you can justify the pick. *"The interviewer cares about the reasoning, not the letters. I'll lead with what the domain pulls me toward and name the tradeoff I'm accepting."*
+
+**Things to mention regardless of style:**
+- *"For real-time data I'd use GraphQL subscriptions over WebSocket, or SSE if we stay REST — either way one connection, many logical channels."*
+- Pagination: cursor-based for real-time lists (items shift), offset-based for static lists.
+- Error responses: standardized shape `{ error: { code, message, field? } }` for REST; GraphQL's `errors[]` array with a typed `extensions.code` for GraphQL.
+- Persisted GraphQL queries turn POSTs into GETs so the CDN can cache them — this is how you get REST-style edge caching without giving up GraphQL ergonomics.
 
 ---
 
@@ -408,44 +416,61 @@ App
 
 ### API Contract
 
-```
-POST /api/auth/login
-  Body: { email, password, rememberMe }
-  Response: Sets HttpOnly cookies (access_token, refresh_token)
-            Returns: { user: { id, name, avatar }, requiresMfa: boolean }
+Same capabilities, two shapes — be ready to answer in whichever style the interviewer prefers.
 
-POST /api/auth/mfa/verify
-  Body: { code, type: 'totp' | 'sms' | 'backup' }
-  Response: Sets HttpOnly cookies
-            Returns: { user: { id, name, avatar } }
+#### REST
+```bash
+POST   /api/auth/login              { email, password, rememberMe }
+  → Sets HttpOnly cookies (access_token, refresh_token)
+  → Returns { user: { id, name, avatar }, requiresMfa: boolean }
 
-POST /api/auth/oauth/:provider
-  Redirects to provider's OAuth page
-  Callback: /api/auth/oauth/:provider/callback?code=...
-  Response: Sets HttpOnly cookies, redirects to ?redirect param
+POST   /api/auth/mfa/verify         { code, type: 'totp'|'sms'|'backup' }
+  → Sets HttpOnly cookies, returns { user }
 
-POST /api/auth/refresh
-  Cookie: refresh_token (sent automatically)
-  Response: Sets new access_token cookie
+GET    /api/auth/oauth/:provider    # plain HTTP redirect to provider
+GET    /api/auth/oauth/:provider/callback?code=...
+  → Exchanges code, sets cookies, redirects to ?redirect param
 
-POST /api/auth/logout
-  Response: Clears cookies, invalidates refresh token server-side
-
-GET /api/auth/me
-  Response: { user: { id, name, avatar, email } } or 401
-
-GET /api/auth/sessions
-  Response: { sessions: [{ id, device, ip, location, lastActive, current }] }
-
-DELETE /api/auth/sessions/:id
-  Response: 204 (revokes that session)
+POST   /api/auth/refresh            # refresh_token cookie sent automatically
+POST   /api/auth/logout             # clears cookies, invalidates refresh token
+GET    /api/auth/me                 → { user } or 401
+GET    /api/auth/sessions           → { sessions: [...] }
+DELETE /api/auth/sessions/:id       → 204
 ```
 
-**OAuth flow (PKCE for SPA):**
+#### GraphQL
+```graphql
+mutation Login($email: String!, $password: String!, $rememberMe: Boolean) {
+  login(email: $email, password: $password, rememberMe: $rememberMe) {
+    user { id, name, avatar }
+    requiresMfa
+  }
+  # Server still sets HttpOnly cookies in the response — same auth model.
+}
+
+mutation VerifyMfa($code: String!, $type: MfaType!) {
+  verifyMfa(code: $code, type: $type) { user { id, name, avatar } }
+}
+
+mutation Logout                        { logout { success } }
+query   Me                             { me { id, name, avatar, email } }
+query   Sessions                       { mySessions { id, device, ip, location, lastActive, current } }
+mutation RevokeSession($id: ID!)       { revokeSession(id: $id) { success } }
+
+# OAuth still uses plain HTTP redirects — GraphQL can't express a 302, so
+# /api/auth/oauth/:provider stays as a real HTTP endpoint alongside these.
+```
+
+**Choosing between them (say this out loud):**
+- **REST fits this walkthrough well:** auth flows are flat, stateless, and cacheless. OAuth already requires real HTTP redirects. Fewer moving parts = less to debug in an incident.
+- **GraphQL is viable** if the rest of the product is GraphQL and you want one uniform client — but you'll still keep `/oauth/:provider` as raw HTTP, and you won't get caching benefits because auth responses aren't cacheable anyway.
+- **I'd lead REST here** unless the team's existing gateway is GraphQL-only.
+
+**OAuth flow (PKCE for SPA — applies to both styles):**
 1. Frontend generates `code_verifier` (random string) and `code_challenge` (SHA256 hash)
 2. Redirect to provider with `code_challenge`
 3. Provider redirects back with `authorization_code`
-4. Frontend sends `code` + `code_verifier` to backend
+4. Frontend sends `code` + `code_verifier` to backend (via POST `/api/auth/oauth/:provider/callback` or a `completeOAuth` mutation)
 5. Backend exchanges with provider, sets cookies, returns user
 
 **Say:** *"I'm using PKCE because this is a public client — a SPA can't keep secrets. The code_verifier proves that the same client that started the OAuth flow is the one finishing it, preventing authorization code interception attacks."*
@@ -613,6 +638,32 @@ App
 
 ### API Contract
 
+Same capabilities, two shapes — be ready to answer in whichever style the interviewer prefers.
+
+#### REST
+```bash
+# Initial match snapshot (also used on reconnect to reconcile missed events)
+GET  /api/matches/:id
+  → { id, status, teams: [{name, logo, score}],
+      currentGame: { goldDiff, kills, towers, dragons, players: [...] },
+      streams: [{ label, url, type }] }
+
+# Real-time updates — one WebSocket, subscribe to channels by message
+WS   /api/stream
+  → client sends: { op: 'subscribe', channel: 'match:123' }
+  → server pushes: { channel, type: 'SCORE_UPDATE'|'KILL'|..., payload, ts }
+  # (Or SSE fallback: GET /api/matches/:id/events — unidirectional, simpler)
+
+# VOD library (cursor-based)
+GET  /api/vods?filter=...&cursor=abc&limit=20
+  → { items: [...], nextCursor }
+
+# Chat — same WebSocket, different channel
+WS   channel 'chat:match:123' → { id, author, text, ts }
+POST /api/matches/:id/chat     { text }   → { id }
+```
+
+#### GraphQL
 ```graphql
 # Initial match load
 query GetLiveMatch($id: ID!) {
@@ -620,9 +671,7 @@ query GetLiveMatch($id: ID!) {
     id, status, teams { name, logo, score }
     currentGame {
       goldDiff, kills, towers, dragons
-      players {
-        name, champion, kda, cs, items, gold
-      }
+      players { name, champion, kda, cs, items, gold }
     }
     streams { label, url, type }
   }
@@ -631,33 +680,33 @@ query GetLiveMatch($id: ID!) {
 # Real-time updates (WebSocket)
 subscription OnMatchUpdate($matchId: ID!) {
   matchUpdated(matchId: $matchId) {
-    type  # SCORE_UPDATE, KILL, OBJECTIVE, GOLD_TICK, GAME_END
-    payload  # varies by type
+    type       # SCORE_UPDATE, KILL, OBJECTIVE, GOLD_TICK, GAME_END
+    payload    # varies by type
     timestamp
   }
 }
 
-# VOD library
+# VOD library (Relay-style cursor pagination)
 query GetVODs($filter: VODFilter, $cursor: String, $limit: Int) {
   vods(filter: $filter, after: $cursor, first: $limit) {
-    edges {
-      node { id, teams, tournament, date, duration, thumbnailUrl, games }
-    }
+    edges { node { id, teams, tournament, date, duration, thumbnailUrl, games } }
     pageInfo { hasNextPage, endCursor }
   }
 }
 
-# Chat (separate WebSocket channel)
+# Chat (separate subscription on the same WebSocket)
 subscription OnChatMessage($matchId: ID!) {
-  chatMessage(matchId: $matchId) {
-    id, author { name, badge }, text, timestamp
-  }
+  chatMessage(matchId: $matchId) { id, author { name, badge }, text, timestamp }
 }
-
 mutation SendChatMessage($matchId: ID!, $text: String!) {
   sendChatMessage(matchId: $matchId, text: $text) { id }
 }
 ```
+
+**Choosing between them (say this out loud):**
+- **GraphQL fits this walkthrough well:** the match graph is deeply nested (match → game → players → items), different views want different slices (viewer vs. analyst vs. mobile), and subscriptions wrap WebSocket in your existing schema so clients have one API.
+- **REST is viable** and actually has one advantage here — CDN caching of VOD list GETs is free with `Cache-Control`, whereas plain GraphQL POSTs need persisted queries to get the same.
+- **I'd lead GraphQL** and cover VODs specifically with persisted queries so the edge still caches them.
 
 ---
 
@@ -958,14 +1007,37 @@ Server accepts: predictions until T+0s exactly
 
 ### API Contract
 
+Same capabilities, two shapes — be ready to answer in whichever style the interviewer prefers.
+
+#### REST
+```bash
+GET    /api/tournaments/:id/bracket
+  → { stages: [{ name, matches: [{ id, team1, team2, status, lockTime, startTime, result }] }] }
+
+GET    /api/tournaments/:id/predictions/me
+  → { predictions: [{ matchId, predictedTeamId, correct, pointsEarned }] }
+
+POST   /api/predictions                       { matchId, teamId }
+  → { matchId, predictedTeamId, lockedAt }
+
+# Batch submit all picks at once (atomic per item, not per request)
+POST   /api/predictions/batch                 { predictions: [{ matchId, teamId }] }
+  → { submitted: [...], failed: [{ matchId, reason }] }
+
+GET    /api/leaderboard?scope=GLOBAL&cursor=abc&limit=50
+  → { myRank: { rank, points, percentile },
+      items: [{ rank, user, points }], nextCursor }
+```
+
+#### GraphQL
 ```graphql
 query GetBracket($tournamentId: ID!) {
   tournament(id: $tournamentId) {
     stages {
-      name  # "Group Stage", "Quarterfinals", etc.
+      name                          # "Group Stage", "Quarterfinals", etc.
       matches {
         id, team1 { name, logo }, team2 { name, logo }
-        status  # UPCOMING, LOCKED, IN_PROGRESS, COMPLETED
+        status                      # UPCOMING, LOCKED, IN_PROGRESS, COMPLETED
         lockTime, startTime
         result { winner, score }
       }
@@ -995,13 +1067,16 @@ mutation SubmitPredictions($predictions: [PredictionInput!]!) {
 query GetLeaderboard($scope: LeaderboardScope!, $cursor: String) {
   leaderboard(scope: $scope, after: $cursor, first: 50) {
     myRank { rank, points, percentile }
-    edges {
-      node { rank, user { name, avatar }, points }
-    }
+    edges { node { rank, user { name, avatar }, points } }
     pageInfo { hasNextPage, endCursor }
   }
 }
 ```
+
+**Choosing between them (say this out loud):**
+- **GraphQL fits this walkthrough well:** the bracket is a tree (tournament → stages → matches → teams), the leaderboard wants typed enum scopes, and batch mutations with per-item failure reporting are cleaner to express as a strongly-typed input list than as loose JSON.
+- **REST is viable** — and its advantage is that the bracket itself is highly cacheable (only changes on match results), so `GET /api/tournaments/:id/bracket` with a short TTL at the edge is cheap and fast.
+- **I'd lead GraphQL** for the mutations and leaderboard, but if pushed on cost I'd happily move the read-heavy bracket endpoint to REST for CDN caching — that hybrid is realistic.
 
 ---
 
@@ -1308,6 +1383,32 @@ SettingsPage
 
 ### API Contract
 
+Same capabilities, two shapes — be ready to answer in whichever style the interviewer prefers.
+
+#### REST
+```bash
+GET    /api/me/settings
+  → { profile, account, notifications: [...], privacy, connections: [...] }
+
+PATCH  /api/me/profile                  { displayName?, avatar?, bio? }
+POST   /api/me/email                    { newEmail, currentPassword }
+  → { success, verificationSent }
+POST   /api/me/password                 { currentPassword, newPassword }
+
+# Granular toggle — one PATCH per row, so optimistic updates rollback cleanly
+PATCH  /api/me/notifications/:category  { channel: 'email'|'push'|'inApp', enabled }
+
+POST   /api/me/avatar                   multipart/form-data: file
+  → { url, thumbnailUrl }
+
+POST   /api/me/data-export              # async — returns job handle
+  → { jobId, estimatedMinutes }
+
+DELETE /api/me                          { confirmation, password }
+  → { success, deletionDate }           # 30-day grace period
+```
+
+#### GraphQL
 ```graphql
 query GetSettings {
   me {
@@ -1330,9 +1431,7 @@ mutation ChangeEmail($newEmail: String!, $currentPassword: String!) {
 }
 
 mutation ChangePassword($current: String!, $new: String!) {
-  changePassword(currentPassword: $current, newPassword: $new) {
-    success
-  }
+  changePassword(currentPassword: $current, newPassword: $new) { success }
 }
 
 mutation UpdateNotificationPreference($category: String!, $channel: String!, $enabled: Boolean!) {
@@ -1356,6 +1455,11 @@ mutation DeleteAccount($confirmation: String!, $password: String!) {
   }
 }
 ```
+
+**Choosing between them (say this out loud):**
+- **GraphQL fits this walkthrough well:** the settings object is wide and nested (profile + account + 4 notification categories × 3 channels + privacy + N connections), and you usually load it all at once on page mount. One query replaces what would otherwise be 5 REST calls.
+- **REST is viable** — `PATCH /api/me/profile` is arguably clearer than typed input objects, and one-endpoint-per-toggle plays nicer with optimistic updates rolling back on a specific row.
+- **I'd lead GraphQL for the read** (`GetSettings` as a single round trip) and not feel strongly about the mutations — that's where the GraphQL win lives.
 
 ---
 
@@ -1574,6 +1678,35 @@ The rich text editor stores content as a JSON AST (not HTML). This is important 
 
 ### API Contract
 
+Same capabilities, two shapes — be ready to answer in whichever style the interviewer prefers.
+
+#### REST
+```bash
+GET    /api/content?filter=...&page=1&limit=20
+  → { items: [{ id, title, status, author, updatedAt, publishedAt, type }],
+      totalCount, pageCount }
+
+GET    /api/content/:id
+  → { id, title, body, status, version, author, updatedAt,
+      metadata: { tags, category, seoTitle, seoDescription, featuredImage },
+      editLock: { lockedBy, lockedAt, expiresAt } | null }
+
+PUT    /api/content/:id/draft         { title, body, metadata }
+  → { id, version, updatedAt }
+
+POST   /api/content/:id/submit-for-review   → { id, status }
+POST   /api/content/:id/publish             → { id, status, publishedAt }
+
+# Edit lock is its own sub-resource
+POST   /api/content/:id/lock                → { success, lock: { lockedBy, expiresAt } }
+DELETE /api/content/:id/lock                → { success }
+
+# Media — pre-signed S3 upload
+POST   /api/media/upload-url           { filename, contentType }
+  → { uploadUrl, publicUrl }
+```
+
+#### GraphQL
 ```graphql
 query GetContentList($filter: ContentFilter, $page: Int, $limit: Int) {
   contentList(filter: $filter, page: $page, limit: $limit) {
@@ -1595,28 +1728,16 @@ query GetContent($id: ID!) {
 }
 
 mutation SaveDraft($id: ID, $input: ContentInput!) {
-  saveDraft(id: $id, input: $input) {
-    id, version, updatedAt
-  }
+  saveDraft(id: $id, input: $input) { id, version, updatedAt }
 }
 
-mutation SubmitForReview($id: ID!) {
-  submitForReview(id: $id) { id, status }
-}
-
-mutation Publish($id: ID!) {
-  publish(id: $id) { id, status, publishedAt }
-}
+mutation SubmitForReview($id: ID!) { submitForReview(id: $id) { id, status } }
+mutation Publish($id: ID!)         { publish(id: $id) { id, status, publishedAt } }
 
 mutation AcquireEditLock($id: ID!) {
-  acquireEditLock(id: $id) {
-    success, lock { lockedBy { name }, expiresAt }
-  }
+  acquireEditLock(id: $id) { success, lock { lockedBy { name }, expiresAt } }
 }
-
-mutation ReleaseEditLock($id: ID!) {
-  releaseEditLock(id: $id) { success }
-}
+mutation ReleaseEditLock($id: ID!) { releaseEditLock(id: $id) { success } }
 
 # Media
 mutation GetUploadUrl($filename: String!, $contentType: String!) {
@@ -1625,6 +1746,11 @@ mutation GetUploadUrl($filename: String!, $contentType: String!) {
   }
 }
 ```
+
+**Choosing between them (say this out loud):**
+- **GraphQL fits this walkthrough well:** the content-list view wants thin rows (title + status + author) but the editor view wants the full body + metadata + edit lock. Per-view field selection is the canonical GraphQL win — one schema, two shapes, no overfetch.
+- **REST is viable** for the writes (save draft / publish / lock), and you could still get list-view thinning via query params like `?fields=id,title,status`. It's clunkier but well-understood.
+- **I'd lead GraphQL** specifically because of the list-vs-detail overfetch problem — that's the cleanest story for this walkthrough.
 
 ---
 
